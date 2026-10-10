@@ -3,6 +3,7 @@ import re
 from collections import Counter
 
 from .models import ModelGateway, ModelUnavailable
+from .indexing import PersistentIndex
 from .store import Store
 
 
@@ -50,6 +51,7 @@ def cosine(a, b):
 class Retriever:
     def __init__(self, store: Store, gateway: ModelGateway):
         self.store, self.gateway = store, gateway
+        self.index = PersistentIndex(store, gateway)
 
     def search(self, query, models=None, version=None, limit=5):
         chunks = self.store.chunks(models, version)
@@ -57,17 +59,18 @@ class Retriever:
         code = re.search(r"(?<![A-Za-z0-9])(?:[A-Za-z]{1,5}[-_]?)\d{2,6}(?![A-Za-z0-9])", query)
         exact = [c for c in chunks if code and re.search(r"(?<![A-Za-z0-9])" + re.escape(code.group()) + r"(?![A-Za-z0-9])", c["text"], re.I)]
         route = "exact_code" if exact else "bm25"
-        lexical = bm25(query, exact or chunks)[:30]
+        lexical = self.index.lexical(query, exact or chunks)[:30]
         rankings = [lexical]
         if self.gateway.settings.embedding_base_url and chunks and not exact:
-            # Small corpus only: cache-free batching avoids stale document/model vectors.
-            # A production adapter should replace this with a persistent vector index.
-            if len(chunks) > 500:
-                warnings.append("本地向量适配器限 500 个切片，当前降级为 BM25；请接入向量索引")
-            else:
+            cached = self.index.vectors(chunks)
+            if len(cached) < len(chunks):
+                warnings.append(f"{len(chunks) - len(cached)} 个切片尚未建立当前模型的向量索引，请执行增量构建")
+            if cached:
                 try:
-                    vectors = self.gateway.embeddings([query] + [c["text"] for c in chunks])
-                    dense = sorted([{**c, "dense_score": cosine(vectors[0], v)} for c, v in zip(chunks, vectors[1:])], key=lambda c: c["dense_score"], reverse=True)[:30]
+                    query_vector = self.gateway.embeddings([query])[0]
+                    if any(len(v) != len(query_vector) for v in cached.values()):
+                        raise ModelUnavailable("查询向量与索引维数不一致")
+                    dense = sorted([{**c, "dense_score": cosine(query_vector, cached[c["id"]])} for c in chunks if c["id"] in cached], key=lambda c: c["dense_score"], reverse=True)[:30]
                     rankings.append(dense)
                     route = "hybrid_rrf"
                 except ModelUnavailable as exc:

@@ -55,7 +55,7 @@ def test_diagnosis_persists_after_restart(client, settings):
         assert state["candidates"][0]["state"] == "not_supported"
         assert state["candidates"][1]["state"] == "supported"
         response = restarted.post(f"/api/sessions/{sid}/confirm", json={"decision": "confirmed", "operator": "测试班组", "note": "独立核验后确认支路异常，记录待维修事项", "expected_revision": state["revision"]})
-        assert response.json()["status"] == "resolved"
+        assert response.json()["status"] == "repairing"
         exported = restarted.get(f"/api/sessions/{sid}/export").json()
         assert len(exported["events"]) == 4
         assert exported["session"]["checks"][1]["note"].endswith("0.35 MPa")
@@ -211,7 +211,9 @@ def test_hybrid_rrf_and_rerank_http_contract(client, settings, monkeypatch, resp
         response = {"scores": scores} if response_format == "scores" else {"results": [{"index": i, "relevance_score": score} for i, score in reversed(list(enumerate(scores)))]}
         return httpx.Response(200, json=response)
     gateway = http_gateway(configured, monkeypatch, handler)
-    result = Retriever(client.app.state.store, gateway).search("多设备气压不足")
+    retriever = Retriever(client.app.state.store, gateway)
+    retriever.index.build()
+    result = retriever.search("多设备气压不足")
     assert result["route"] == "hybrid_rrf+rerank"
     assert not result["warnings"] and "dense_score" in result["items"][0]
     assert "rerank_score" in result["items"][0]

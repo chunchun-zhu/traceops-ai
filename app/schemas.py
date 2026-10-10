@@ -1,6 +1,14 @@
+from datetime import datetime, timezone
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+def utc_timestamp(value: str) -> str:
+    stamp = datetime.fromisoformat(value)
+    if stamp.tzinfo is None:
+        raise ValueError("时间须包含时区")
+    return stamp.astimezone(timezone.utc).isoformat()
 
 
 class SearchInput(BaseModel):
@@ -77,3 +85,42 @@ class TopologyEdge(BaseModel):
 class TopologyInput(BaseModel):
     nodes: list[TopologyNode] = Field(min_length=1, max_length=500)
     edges: list[TopologyEdge] = Field(default_factory=list, max_length=1000)
+
+
+class RepairInput(BaseModel):
+    operator: str = Field(min_length=1, max_length=100)
+    action: str = Field(min_length=1, max_length=2000)
+    completed_at: str
+    expected_revision: int = Field(ge=0)
+
+    _utc = field_validator("completed_at")(utc_timestamp)
+
+
+class RetestReading(BaseModel):
+    device_id: str
+    value: float = Field(ge=0, le=100, allow_inf_nan=False)
+    minimum: float = Field(ge=0, le=100, allow_inf_nan=False)
+    maximum: float = Field(ge=0, le=100, allow_inf_nan=False)
+    observed_at: str
+    reference_document_id: str
+
+    _utc = field_validator("observed_at")(utc_timestamp)
+
+    @model_validator(mode="after")
+    def valid_range(self):
+        if self.minimum > self.maximum:
+            raise ValueError("压力下限不能超过上限")
+        return self
+
+
+class VerifyInput(BaseModel):
+    result: Literal["passed", "failed", "unknown"]
+    operator: str = Field(min_length=1, max_length=100)
+    note: str = Field(min_length=1, max_length=2000)
+    alarms_cleared: bool
+    readings: list[RetestReading] = Field(default_factory=list, max_length=20)
+    expected_revision: int = Field(ge=0)
+
+
+class DocumentStatusInput(BaseModel):
+    active: bool

@@ -11,9 +11,9 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import ROOT, Settings
 from .ingest import ingest, parse_file
-from .models import ModelGateway
+from .models import ModelGateway, ModelUnavailable
 from .retrieval import Retriever
-from .schemas import ClarifyInput, ConfirmInput, DocumentInput, FeedbackInput, MeasurementInput, SearchInput, StartInput, TopologyInput
+from .schemas import ClarifyInput, ConfirmInput, DocumentInput, FeedbackInput, MeasurementInput, SearchInput, StartInput, TopologyInput, RepairInput, VerifyInput, DocumentStatusInput
 from .seed import seed
 from .store import ConflictError, Store
 from .topology import Topology
@@ -31,9 +31,12 @@ def create_app(settings: Settings | None = None):
     async def lifespan(app):
         if settings.seed_demo:
             seed(store)
-        yield
+        try:
+            yield
+        finally:
+            workflow.close()
 
-    app = FastAPI(title="溯障 · 设备诊断与协同排障", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="溯障 · 设备诊断与协同排障", version="0.2.0", lifespan=lifespan)
     app.state.store, app.state.workflow = store, workflow
 
     def authorize(authorization: str | None = Header(default=None)):
@@ -65,11 +68,15 @@ def create_app(settings: Settings | None = None):
     async def conflict(request, exc):
         return JSONResponse(status_code=409, content={"detail": str(exc)})
 
+    @app.exception_handler(ModelUnavailable)
+    async def model_unavailable(request, exc):
+        return JSONResponse(status_code=503, content={"detail": str(exc)})
+
     auth = [Depends(authorize)]
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "version": "0.1.0", "llm_configured": bool(settings.llm_base_url),
+        return {"status": "ok", "version": "0.2.0", "llm_configured": bool(settings.llm_base_url),
                 "embedding_configured": bool(settings.embedding_base_url), "rerank_configured": bool(settings.rerank_url),
                 "authentication": bool(settings.api_token), "demo_data": settings.seed_demo}
 
@@ -114,6 +121,18 @@ def create_app(settings: Settings | None = None):
     def document(doc_id: str):
         return store.document(doc_id)
 
+    @app.post("/api/documents/{doc_id}/status", dependencies=auth)
+    def document_status(doc_id: str, request: DocumentStatusInput):
+        return store.document_status(doc_id, request.active)
+
+    @app.get("/api/indexes", dependencies=auth)
+    def index_status():
+        return retriever.index.status()
+
+    @app.post("/api/indexes/embeddings/build", dependencies=auth)
+    def build_embeddings():
+        return retriever.index.build()
+
     @app.post("/api/documents", dependencies=auth)
     def add_document(request: DocumentInput):
         return ingest(store, request)
@@ -137,15 +156,15 @@ def create_app(settings: Settings | None = None):
 
     @app.get("/api/sessions", dependencies=auth)
     def sessions():
-        return store.sessions()
+        return workflow.sessions()
 
     @app.get("/api/sessions/{session_id}", dependencies=auth)
     def session(session_id: str):
-        return store.session(session_id)
+        return workflow.session(session_id)
 
     @app.get("/api/sessions/{session_id}/export", dependencies=auth)
     def export(session_id: str):
-        return {"session": store.session(session_id), "events": store.events(session_id)}
+        return {"session": workflow.session(session_id), "events": store.events(session_id)}
 
     @app.post("/api/sessions/{session_id}/clarify", dependencies=auth)
     def clarify(session_id: str, request: ClarifyInput):
@@ -158,6 +177,14 @@ def create_app(settings: Settings | None = None):
     @app.post("/api/sessions/{session_id}/confirm", dependencies=auth)
     def confirm(session_id: str, request: ConfirmInput):
         return workflow.confirm(session_id, request)
+
+    @app.post("/api/sessions/{session_id}/repair", dependencies=auth)
+    def repair(session_id: str, request: RepairInput):
+        return workflow.repair(session_id, request)
+
+    @app.post("/api/sessions/{session_id}/verify", dependencies=auth)
+    def verify(session_id: str, request: VerifyInput):
+        return workflow.verify(session_id, request)
 
     app.mount("/static", StaticFiles(directory=ROOT / "app" / "static"), name="static")
 

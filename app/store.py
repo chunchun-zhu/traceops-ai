@@ -50,7 +50,22 @@ class Store:
                     revision INTEGER NOT NULL, payload TEXT NOT NULL,
                     UNIQUE(session_id,revision)
                 );
+                CREATE TABLE IF NOT EXISTS index_stats (
+                    chunk_id TEXT PRIMARY KEY REFERENCES chunks(id), length INTEGER NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS index_terms (
+                    chunk_id TEXT NOT NULL REFERENCES chunks(id), term TEXT NOT NULL, frequency INTEGER NOT NULL,
+                    PRIMARY KEY(chunk_id,term)
+                );
+                CREATE INDEX IF NOT EXISTS term_lookup ON index_terms(term);
+                CREATE TABLE IF NOT EXISTS embeddings (
+                    chunk_id TEXT NOT NULL REFERENCES chunks(id), model_key TEXT NOT NULL,
+                    dimension INTEGER NOT NULL, vector TEXT NOT NULL, created_at TEXT NOT NULL,
+                    PRIMARY KEY(chunk_id,model_key)
+                );
             """)
+            if "active" not in {r[1] for r in db.execute("PRAGMA table_info(documents)")}:
+                db.execute("ALTER TABLE documents ADD COLUMN active INTEGER NOT NULL DEFAULT 1")
 
     @contextmanager
     def connect(self):
@@ -91,24 +106,30 @@ class Store:
 
     def documents(self):
         with self.connect() as db:
-            return [json.loads(r[0]) for r in db.execute("SELECT payload FROM documents ORDER BY rowid DESC")]
+            return [{**json.loads(r[0]), "active": bool(r[1])} for r in db.execute("SELECT payload,active FROM documents ORDER BY rowid DESC")]
 
     def document(self, doc_id):
         with self.connect() as db:
-            row = db.execute("SELECT payload FROM documents WHERE id=?", (doc_id,)).fetchone()
+            row = db.execute("SELECT payload,active FROM documents WHERE id=?", (doc_id,)).fetchone()
             if not row:
                 raise KeyError(doc_id)
-            return json.loads(row[0])
+            return {**json.loads(row[0]), "active": bool(row[1])}
+
+    def document_status(self, doc_id, active):
+        with self.connect() as db:
+            if db.execute("UPDATE documents SET active=? WHERE id=?", (int(active), doc_id)).rowcount != 1:
+                raise KeyError(doc_id)
+        return self.document(doc_id)
 
     def chunks(self, models=None, version=None):
-        sql, params = "SELECT payload FROM chunks WHERE 1=1", []
+        sql, params = "SELECT chunks.payload FROM chunks JOIN documents ON documents.id=chunks.document_id WHERE documents.active=1", []
         if models:
             sql += " AND model IN (" + ",".join("?" for _ in models) + ")"
             params.extend(models)
         if version:
             sql += " AND version=?"
             params.append(version)
-        sql += " ORDER BY id"
+        sql += " ORDER BY chunks.id"
         with self.connect() as db:
             return [json.loads(r[0]) for r in db.execute(sql, params)]
 
@@ -118,9 +139,11 @@ class Store:
             existing = db.execute("SELECT payload FROM documents WHERE fingerprint=?", (document["fingerprint"],)).fetchone()
             if existing:
                 return {**json.loads(existing[0]), "duplicate": True}
-            db.execute("INSERT INTO documents VALUES(?,?,?)", (document["id"], document["fingerprint"], json.dumps(document, ensure_ascii=False)))
+            db.execute("INSERT INTO documents(id,fingerprint,payload) VALUES(?,?,?)", (document["id"], document["fingerprint"], json.dumps(document, ensure_ascii=False)))
             for chunk in chunks:
                 db.execute("INSERT INTO chunks VALUES(?,?,?,?,?)", (chunk["id"], document["id"], document["model"], document["version"], json.dumps(chunk, ensure_ascii=False)))
+            from .indexing import index_chunks
+            index_chunks(db, chunks)
         return {**document, "duplicate": False}
 
     def new_session(self, state):
@@ -154,3 +177,18 @@ class Store:
         self.session(session_id)
         with self.connect() as db:
             return [json.loads(r[0]) for r in db.execute("SELECT payload FROM events WHERE session_id=? ORDER BY revision", (session_id,))]
+
+    def project_session(self, state):
+        """Materialize the checkpoint into the API projection and audit event atomically."""
+        public = {k: v for k, v in state.items() if not k.startswith("_")}
+        event = state.get("_event", {"type": "started", "at": now()})
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT revision FROM sessions WHERE id=?", (public["id"],)).fetchone()
+            if not row:
+                raise KeyError(public["id"])
+            if row[0] > public["revision"]:
+                raise ConflictError("检查点版本落后于会话记录")
+            db.execute("UPDATE sessions SET revision=?,updated_at=?,payload=? WHERE id=?", (public["revision"], public["updated_at"], json.dumps(public, ensure_ascii=False), public["id"]))
+            db.execute("INSERT INTO events(session_id,revision,payload) VALUES(?,?,?) ON CONFLICT(session_id,revision) DO UPDATE SET payload=excluded.payload", (public["id"], public["revision"], json.dumps({**event, "state": public}, ensure_ascii=False)))
+        return public
