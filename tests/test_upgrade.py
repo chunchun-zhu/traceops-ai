@@ -35,8 +35,9 @@ def repair(client, state):
 def retest_payload(client, state, result="passed"):
     documents = client.get("/api/documents").json()
     reference = next(d["id"] for d in documents if d["model"] == "AIR-SYSTEM" and d["kind"] == "manual")
+    standard = client.post("/api/standards",json={"title":"人工核验的测试标准","model":"AIR-SYSTEM","minimum":0.6,"maximum":0.8,"reference_document_id":reference,"page":1,"quote":"多设备气压不足","approved_by":"测试班"}).json()
     return {"result": result, "operator": "验收班", "note": "维修后现场读数与告警已核对", "alarms_cleared": True,
-            "readings": [{"device_id": d, "value": 0.68, "minimum": 0.6, "maximum": 0.8, "observed_at": timestamp(), "reference_document_id": reference} for d in state["device_ids"]], "expected_revision": state["revision"]}
+            "readings": [{"device_id": d, "value": 0.68, "minimum": 0.6, "maximum": 0.8, "observed_at": timestamp(), "reference_document_id": reference, "standard_id":standard["id"]} for d in state["device_ids"]], "expected_revision": state["revision"]}
 
 
 def verify(client, state, payload):
@@ -157,7 +158,7 @@ def test_old_manual_confirmation_migrates_without_erasing_history(client):
         "retrieval_route": "bm25", "model_explanation": None, "confirmation": {"operator": "旧班组", "note": "原始结论", "at": timestamp()}, "mode": "rule_demo"})
     migrated = client.get(f"/api/sessions/{legacy['id']}").json()
     assert migrated["status"] == "repairing" and migrated["confirmation"]["note"] == "原始结论"
-    assert migrated["workflow_version"] == 2
+    assert migrated["workflow_version"] == 3
 
 
 def test_persisted_bm25_matches_baseline_and_disabled_docs_excluded(client):

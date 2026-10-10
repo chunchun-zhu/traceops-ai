@@ -21,6 +21,24 @@ class Store:
         with self.connect() as db:
             db.executescript("""
                 PRAGMA journal_mode=WAL;
+                CREATE TABLE IF NOT EXISTS alarms (
+                    id TEXT PRIMARY KEY, source TEXT NOT NULL, event_id TEXT NOT NULL,
+                    device_id TEXT NOT NULL REFERENCES nodes(id), code TEXT NOT NULL,
+                    occurred_at TEXT NOT NULL, payload TEXT NOT NULL, UNIQUE(source,event_id)
+                );
+                CREATE INDEX IF NOT EXISTS alarm_time ON alarms(device_id,occurred_at);
+                CREATE TABLE IF NOT EXISTS standards (
+                    id TEXT PRIMARY KEY, active INTEGER NOT NULL DEFAULT 1, payload TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS jobs (
+                    id TEXT PRIMARY KEY, kind TEXT NOT NULL, dedupe_key TEXT NOT NULL,
+                    status TEXT NOT NULL, cancel_requested INTEGER NOT NULL DEFAULT 0,
+                    attempts INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL, input TEXT NOT NULL, progress TEXT NOT NULL,
+                    result TEXT, error TEXT
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS job_dedupe ON jobs(dedupe_key)
+                    WHERE status IN ('queued','running','committing');
                 CREATE TABLE IF NOT EXISTS nodes (
                     id TEXT PRIMARY KEY, payload TEXT NOT NULL
                 );

@@ -57,7 +57,7 @@ class PersistentIndex:
         with self.store.connect() as db:
             return {r[0]: json.loads(r[1]) for r in db.execute("SELECT chunk_id,vector FROM embeddings WHERE model_key=?", (self.model_key,)) if r[0] in wanted}
 
-    def build(self, batch_size=32):
+    def build(self, batch_size=32, progress=None):
         if not self.gateway.settings.embedding_base_url:
             raise ValueError("请先配置 Embedding 服务；此操作不会部署模型")
         chunks = self.store.chunks()
@@ -65,7 +65,11 @@ class PersistentIndex:
         missing = [c for c in chunks if c["id"] not in cached]
         dimensions = {len(v) for v in cached.values()}
         added = 0
+        if progress:
+            progress(len(cached), len(chunks))
         for offset in range(0, len(missing), batch_size):
+            if progress:
+                progress(len(cached)+added, len(chunks))
             batch = missing[offset:offset + batch_size]
             vectors = self.gateway.embeddings([c["text"] for c in batch])
             dimensions.add(len(vectors[0]))
@@ -74,6 +78,8 @@ class PersistentIndex:
             with self.store.connect() as db:
                 db.executemany("INSERT OR IGNORE INTO embeddings VALUES(?,?,?,?,?)", [(c["id"], self.model_key, len(v), json.dumps(v), now()) for c, v in zip(batch, vectors)])
             added += len(batch)
+            if progress:
+                progress(len(cached)+added, len(chunks))
         return {"total": len(chunks), "added": added, "reused": len(cached), "model_key": self.model_key}
 
     def status(self):

@@ -15,6 +15,7 @@ from .retrieval import Retriever
 from .schemas import ClarifyInput, ConfirmInput, FeedbackInput, StartInput, RepairInput, VerifyInput
 from .store import ConflictError, Store, now
 from .topology import Topology
+from .operations import Operations
 
 
 class GraphState(TypedDict, total=False):
@@ -43,6 +44,7 @@ class GraphState(TypedDict, total=False):
     workflow_version: int
     repairs: list[dict]
     verifications: list[dict]
+    alarm_events: list[dict]
     device_models: dict[str, str]
     _action: dict | None
     _event: dict
@@ -52,6 +54,7 @@ class Workflow:
     def __init__(self, store: Store, retriever: Retriever, gateway: ModelGateway):
         self.store, self.retriever, self.gateway = store, retriever, gateway
         self.topology = Topology(store)
+        self.operations = Operations(store)
         self.skill = json.loads((ROOT / "skills" / "air-supply.json").read_text(encoding="utf-8"))
         self.lock = FileLock(str(store.path) + ".workflow.lock", timeout=30)
         self.checkpoint_connection = sqlite3.connect(str(store.path) + ".checkpoints", check_same_thread=False, timeout=10)
@@ -162,15 +165,22 @@ class Workflow:
         return update
 
     def start(self, request: StartInput):
-        if request.device_ids:
-            self.topology.common(request.device_ids)
         with self.lock:
+            selected = self.operations.selected_alarms(request.alarm_ids) if request.alarm_ids else []
+            if selected:
+                alarm_devices = {a["device_id"] for a in selected}
+                if not request.device_ids:
+                    request = request.model_copy(update={"device_ids":sorted(alarm_devices)})
+                elif not alarm_devices.issubset(request.device_ids):
+                    raise ValueError("所选告警设备必须包含在排障设备中")
+            if request.device_ids:
+                self.topology.common(request.device_ids)
             state = self.store.new_session({"device_ids": request.device_ids, "symptom": request.symptom,
             "status": "new", "question": None, "candidates": [], "evidence": [], "topology": [],
             "observations": [], "checks": [], "current_check": None, "summary": "", "warnings": [], "trace": [],
             "skill": {"id": self.skill["id"], "version": self.skill["version"]}, "retrieval_route": "none",
-                "model_explanation": None, "confirmation": None, "mode": "rule_demo", "workflow_version": 2,
-                "repairs": [], "verifications": [], "device_models": {}})
+                "model_explanation": None, "confirmation": None, "mode": "rule_demo", "workflow_version": 3,
+                "repairs": [], "verifications": [], "device_models": {}, "alarm_events": selected})
             self.graph.invoke(state, config=self.config(state["id"]))
             return self.sync(state["id"])
 
@@ -188,7 +198,7 @@ class Workflow:
         snapshot = self.graph.get_state(config)
         if not snapshot.values:
             # Older API snapshots are seeded at entry without replaying completed checks.
-            state.update(workflow_version=2, repairs=state.get("repairs", []), verifications=state.get("verifications", []),
+            state.update(workflow_version=3, repairs=state.get("repairs", []), verifications=state.get("verifications", []),
                          device_models=state.get("device_models", {n["id"]: n["model"] for n in self.store.nodes() if n["id"] in state["device_ids"]}))
             if state["status"] == "resolved" and not state["verifications"]:
                 state.update(status="repairing", summary="旧版人工确认已保留；尚无维修后复测记录，需补充维修与核验后才能关闭。")
@@ -268,6 +278,11 @@ class Workflow:
         return self.resume(session_id, "verify", request)
 
     def apply_verify(self, state, payload):
+        if payload["result"] == "passed":
+            payload["alarm_resolution"] = self.operations.cleared_for(state.get("alarm_events",[]),state["repairs"][-1]["completed_at"])
+        for reading in payload["readings"]:
+            if reading.get("standard_id"):
+                reading["standard_snapshot"] = self.operations.standard(reading["standard_id"])
         state["verifications"].append({**payload, "repair_number": len(state["repairs"]), "at": now()})
         status = {"passed": "resolved", "failed": "repairing", "unknown": "handoff"}[payload["result"]]
         summary = {"passed": "全部告警设备复测在人工提供的适用范围内，告警消除已由人工核验，故障闭环完成。",
@@ -303,9 +318,13 @@ class Workflow:
                 raise ValueError("须先记录维修完成再提交复测")
             if request.result == "passed" and (not request.alarms_cleared or {r.device_id for r in request.readings} != set(state["device_ids"]) or len(request.readings) != len(state["device_ids"])):
                 raise ValueError("通过复测须覆盖全部告警设备且确认告警已消除")
+            if request.result == "passed":
+                self.operations.cleared_for(state.get("alarm_events",[]),state["repairs"][-1]["completed_at"])
             if len({r.device_id for r in request.readings}) != len(request.readings):
                 raise ValueError("复测设备不能重复")
             for reading in request.readings:
+                if request.result == "passed" or reading.standard_id:
+                    self.operations.validate_reading(reading,state["device_models"][reading.device_id] if reading.device_id in state["device_models"] else "")
                 if reading.device_id not in state["device_ids"]:
                     raise ValueError("复测设备不属于当前会话")
                 stamp = datetime.fromisoformat(reading.observed_at)

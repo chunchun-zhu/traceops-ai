@@ -6,6 +6,7 @@ from .models import ModelGateway
 from .retrieval import Retriever
 from .store import Store
 from .topology import Topology
+from .operations import Operations
 
 settings = Settings()
 store = Store(settings.resolved_db_path)
@@ -40,6 +41,22 @@ def search_maintenance_evidence(query: str, model: str | None = None, version: s
     if not query.strip() or len(query) > 1000:
         return {"error": "query 须为 1–1000 字符", "items": []}
     return retriever.search(query, [model] if model else None, version)
+
+
+@server.tool()
+def get_alarm_events(device_id: str | None = None, since: str | None = None, until: str | None = None, active: bool = False) -> dict:
+    """读取告警事件时间窗或未消除告警；保留来源与事件时间，最多 200 条。"""
+    try:
+        return {"items":Operations(store).alarms(device_id,since,until,active),"source":"stored_alarm_events"}
+    except ValueError as exc:
+        return {"error":str(exc),"items":[]}
+
+
+@server.tool()
+def get_pressure_standards(model: str | None = None) -> dict:
+    """读取有效、原文可追溯的复测标准；数值范围由人工核验。"""
+    operations=Operations(store)
+    return {"items":[s for s in operations.standards() if s["active"] and operations.store.document(s["reference_document_id"])["active"] and (not model or s["model"] in {model,"AIR-SYSTEM"})],"source":"approved_pressure_standards"}
 
 
 if __name__ == "__main__":

@@ -246,11 +246,15 @@ def test_mcp_protocol_lists_and_calls_real_tools(client, settings):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 listed = await session.list_tools()
-                assert {t.name for t in listed.tools} == {"get_device_registry", "find_common_supply", "get_pressure_snapshots", "search_maintenance_evidence"}
+                assert {t.name for t in listed.tools} == {"get_device_registry", "find_common_supply", "get_pressure_snapshots", "search_maintenance_evidence", "get_alarm_events", "get_pressure_standards"}
                 result = await session.call_tool("find_common_supply", {"device_ids": ["PRESS-01", "ASSY-01"]})
                 assert not result.isError
                 parsed = json.loads(result.content[0].text)
                 assert parsed["items"][0]["node"]["id"] == "BR-A"
                 result = await session.call_tool("search_maintenance_evidence", {"query": "E101", "model": "P-200"})
                 assert json.loads(result.content[0].text)["items"][0]["page"] == 1
+                alarms = await session.call_tool("get_alarm_events", {"active": True})
+                assert not alarms.isError and json.loads(alarms.content[0].text)["items"] == []
+                standards = await session.call_tool("get_pressure_standards", {"model":"P-200"})
+                assert not standards.isError and json.loads(standards.content[0].text)["items"][0]["quote"]
     anyio.run(run)

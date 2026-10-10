@@ -31,6 +31,7 @@ class DocumentInput(BaseModel):
 class StartInput(BaseModel):
     device_ids: list[str] = Field(default_factory=list, max_length=20)
     symptom: str = Field(min_length=1, max_length=2000)
+    alarm_ids: list[str] = Field(default_factory=list, max_length=20)
 
     @model_validator(mode="after")
     def unique_devices(self):
@@ -103,6 +104,7 @@ class RetestReading(BaseModel):
     maximum: float = Field(ge=0, le=100, allow_inf_nan=False)
     observed_at: str
     reference_document_id: str
+    standard_id: str | None = None
 
     _utc = field_validator("observed_at")(utc_timestamp)
 
@@ -124,3 +126,31 @@ class VerifyInput(BaseModel):
 
 class DocumentStatusInput(BaseModel):
     active: bool
+
+
+class AlarmInput(BaseModel):
+    event_id: str = Field(min_length=1, max_length=100)
+    device_id: str = Field(min_length=1, max_length=100)
+    code: str = Field(min_length=1, max_length=100)
+    status: Literal["raised", "cleared"]
+    occurred_at: str
+    source: str = Field(min_length=1, max_length=100)
+    message: str = Field(default="", max_length=2000)
+    _utc = field_validator("occurred_at")(utc_timestamp)
+
+
+class StandardInput(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    model: str = Field(min_length=1, max_length=100)
+    minimum: float = Field(ge=0, le=100, allow_inf_nan=False)
+    maximum: float = Field(ge=0, le=100, allow_inf_nan=False)
+    reference_document_id: str
+    page: int = Field(ge=1, le=500)
+    quote: str = Field(min_length=1, max_length=4000)
+    source_start: int | None = Field(default=None, ge=0)
+    approved_by: str = Field(min_length=1, max_length=100)
+    @model_validator(mode="after")
+    def valid_bounds(self):
+        if self.minimum > self.maximum:
+            raise ValueError("标准下限不能超过上限")
+        return self
