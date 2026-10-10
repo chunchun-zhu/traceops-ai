@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 def utc_timestamp(value: str) -> str:
@@ -65,9 +65,36 @@ class MeasurementInput(BaseModel):
     source: str = Field(min_length=1, max_length=200)
 
 
+class ModelCitation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    evidence_id: str = Field(min_length=1, max_length=200)
+    quote: str = Field(min_length=8, max_length=2000)
+    start: int = Field(ge=0, strict=True)
+    end: int = Field(ge=1, strict=True)
+
+    @model_validator(mode="after")
+    def valid_span(self):
+        if len(self.quote.strip()) < 8 or self.end-self.start != len(self.quote):
+            raise ValueError("引文长度与位置不一致")
+        return self
+
+
+class ModelClaim(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    text: str = Field(min_length=1, max_length=800)
+    citations: list[ModelCitation] = Field(min_length=1, max_length=5)
+
+    @field_validator("text")
+    @classmethod
+    def not_blank(cls, value):
+        if not value.strip():
+            raise ValueError("结论不能为空")
+        return value
+
+
 class ModelExplanation(BaseModel):
-    summary: str = Field(min_length=1, max_length=2000)
-    evidence_ids: list[str] = Field(min_length=1, max_length=20)
+    model_config = ConfigDict(extra="forbid")
+    claims: list[ModelClaim] = Field(min_length=1, max_length=8)
 
 
 class TopologyNode(BaseModel):

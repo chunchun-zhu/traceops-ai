@@ -1,0 +1,2340 @@
+{
+  "schema_version": 1,
+  "application_version": "0.6.0",
+  "started_at": "2026-10-10T10:55:57.454328+00:00",
+  "finished_at": "2026-10-10T10:56:21.730172+00:00",
+  "elapsed_ms": 24275.85,
+  "dataset": {
+    "name": "供气排障与引用回归（模拟）",
+    "revision": "v1",
+    "kind": "synthetic",
+    "provenance": "项目自编模拟资料与状态契约；模型响应均为明确标记的接口替身，不是现场故障或模型准确率标注。",
+    "sha256": "f93c08ba29fe1a578302739891b597f12de445fe7d94c0d4464145fc89a3b5e4"
+  },
+  "models": "rules_and_labelled_fixtures",
+  "note": "匹配预期的回归案例比例不是故障诊断准确率；引用定位不证明语义支持。模拟数据不代表真实工厂效果。",
+  "summary": {
+    "total": 43,
+    "passed": 43,
+    "failed": 0,
+    "pass_rate": 1.0
+  },
+  "retrieval_metrics": {
+    "label_level": "document_title",
+    "cutoff": "top 5 chunks deduplicated into documents",
+    "positive_count": 7,
+    "negative_count": 5,
+    "Hit@5": 1.0,
+    "Recall@5": 1.0,
+    "MRR@5": 1.0,
+    "negative_pass_rate": 1.0
+  },
+  "results": [
+    {
+      "id": "retrieval-1",
+      "category": "retrieval",
+      "passed": true,
+      "expect_empty": false,
+      "hit": true,
+      "recall": 1.0,
+      "rr": 1.0,
+      "retrieved_titles": [
+        "冲压机供气检查说明（模拟）"
+      ],
+      "relevant_titles": [
+        "冲压机供气检查说明（模拟）"
+      ],
+      "route": "exact_code",
+      "expected_route": null,
+      "warnings": [],
+      "elapsed_ms": 13.11
+    },
+    {
+      "id": "retrieval-2",
+      "category": "retrieval",
+      "passed": true,
+      "expect_empty": false,
+      "hit": true,
+      "recall": 1.0,
+      "rr": 1.0,
+      "retrieved_titles": [
+        "装配台供气检查说明（模拟）"
+      ],
+      "relevant_titles": [
+        "装配台供气检查说明（模拟）"
+      ],
+      "route": "exact_code",
+      "expected_route": null,
+      "warnings": [],
+      "elapsed_ms": 8.54
+    },
+    {
+      "id": "retrieval-3",
+      "category": "retrieval",
+      "passed": true,
+      "expect_empty": false,
+      "hit": true,
+      "recall": 1.0,
+      "rr": 1.0,
+      "retrieved_titles": [
+        "公共供气关联排障说明（模拟）",
+        "A 区低压维修工单（模拟）"
+      ],
+      "relevant_titles": [
+        "公共供气关联排障说明（模拟）"
+      ],
+      "route": "bm25",
+      "expected_route": null,
+      "warnings": [],
+      "elapsed_ms": 6.93
+    },
+    {
+      "id": "retrieval-4",
+      "category": "retrieval",
+      "passed": true,
+      "expect_empty": false,
+      "hit": true,
+      "recall": 1.0,
+      "rr": 1.0,
+      "retrieved_titles": [
+        "A 区低压维修工单（模拟）",
+        "公共供气关联排障说明（模拟）"
+      ],
+      "relevant_titles": [
+        "A 区低压维修工单（模拟）"
+      ],
+      "route": "bm25",
+      "expected_route": null,
+      "warnings": [],
+      "elapsed_ms": 10.25
+    },
+    {
+      "id": "retrieval-5",
+      "category": "retrieval",
+      "passed": true,
+      "expect_empty": false,
+      "hit": true,
+      "recall": 1.0,
+      "rr": 1.0,
+      "retrieved_titles": [
+        "冲压机供气检查说明（模拟）"
+      ],
+      "relevant_titles": [
+        "冲压机供气检查说明（模拟）"
+      ],
+      "route": "bm25",
+      "expected_route": null,
+      "warnings": [],
+      "elapsed_ms": 9.01
+    },
+    {
+      "id": "retrieval-6",
+      "category": "retrieval",
+      "passed": true,
+      "expect_empty": false,
+      "hit": true,
+      "recall": 1.0,
+      "rr": 1.0,
+      "retrieved_titles": [
+        "公共供气关联排障说明（模拟）",
+        "A 区低压维修工单（模拟）"
+      ],
+      "relevant_titles": [
+        "公共供气关联排障说明（模拟）"
+      ],
+      "route": "bm25",
+      "expected_route": null,
+      "warnings": [],
+      "elapsed_ms": 8.94
+    },
+    {
+      "id": "exact-v2",
+      "category": "retrieval",
+      "passed": true,
+      "expect_empty": false,
+      "hit": true,
+      "recall": 1.0,
+      "rr": 1.0,
+      "retrieved_titles": [
+        "版本边界手册（模拟）"
+      ],
+      "relevant_titles": [
+        "版本边界手册（模拟）"
+      ],
+      "route": "exact_code",
+      "expected_route": "exact_code",
+      "warnings": [],
+      "elapsed_ms": 9.82
+    },
+    {
+      "id": "empty-version",
+      "category": "retrieval",
+      "passed": true,
+      "expect_empty": true,
+      "hit": false,
+      "recall": null,
+      "rr": 0,
+      "retrieved_titles": [],
+      "relevant_titles": [],
+      "route": "bm25",
+      "expected_route": null,
+      "warnings": [],
+      "elapsed_ms": 5.34
+    },
+    {
+      "id": "empty-model",
+      "category": "retrieval",
+      "passed": true,
+      "expect_empty": true,
+      "hit": false,
+      "recall": null,
+      "rr": 0,
+      "retrieved_titles": [],
+      "relevant_titles": [],
+      "route": "bm25",
+      "expected_route": null,
+      "warnings": [],
+      "elapsed_ms": 5.66
+    },
+    {
+      "id": "code-boundary",
+      "category": "retrieval",
+      "passed": true,
+      "expect_empty": true,
+      "hit": false,
+      "recall": null,
+      "rr": 0,
+      "retrieved_titles": [],
+      "relevant_titles": [],
+      "route": "bm25",
+      "expected_route": null,
+      "warnings": [],
+      "elapsed_ms": 8.14
+    },
+    {
+      "id": "unknown-code",
+      "category": "retrieval",
+      "passed": true,
+      "expect_empty": true,
+      "hit": false,
+      "recall": null,
+      "rr": 0,
+      "retrieved_titles": [],
+      "relevant_titles": [],
+      "route": "bm25",
+      "expected_route": null,
+      "warnings": [],
+      "elapsed_ms": 9.3
+    },
+    {
+      "id": "model-code-isolation",
+      "category": "retrieval",
+      "passed": true,
+      "expect_empty": true,
+      "hit": false,
+      "recall": null,
+      "rr": 0,
+      "retrieved_titles": [],
+      "relevant_titles": [],
+      "route": "bm25",
+      "expected_route": null,
+      "warnings": [],
+      "elapsed_ms": 8.42
+    },
+    {
+      "id": "initial-check",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "topology.0.node.id",
+          "expected": "BR-A",
+          "actual": "BR-A",
+          "passed": true
+        },
+        {
+          "path": "mode",
+          "expected": "rule_demo",
+          "actual": "rule_demo",
+          "passed": true
+        }
+      ],
+      "final_status": "checking",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 570.19
+    },
+    {
+      "id": "clarify-devices",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "needs_info",
+          "actual": "needs_info",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "clarify",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true,
+          "step": 1,
+          "action": "clarify"
+        },
+        {
+          "path": "current_check.id",
+          "expected": "source_pressure",
+          "actual": "source_pressure",
+          "passed": true,
+          "step": 1,
+          "action": "clarify"
+        }
+      ],
+      "final_status": "checking",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 604.03
+    },
+    {
+      "id": "unsupported-handoff",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "handoff",
+          "actual": "handoff",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "confirm",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "handed_off",
+          "actual": "handed_off",
+          "passed": true,
+          "step": 1,
+          "action": "confirm"
+        }
+      ],
+      "final_status": "handed_off",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 622.82
+    },
+    {
+      "id": "missing-documents",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "handoff",
+          "actual": "handoff",
+          "passed": true
+        },
+        {
+          "path": "evidence",
+          "expected": [],
+          "actual": [],
+          "passed": true
+        }
+      ],
+      "final_status": "handoff",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 673.1
+    },
+    {
+      "id": "disconnected-device",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "handoff",
+          "actual": "handoff",
+          "passed": true
+        },
+        {
+          "path": "topology",
+          "expected": [],
+          "actual": [],
+          "passed": true
+        }
+      ],
+      "final_status": "handoff",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 583.59
+    },
+    {
+      "id": "cross-branch",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "topology.0.node.id",
+          "expected": "COMP-01",
+          "actual": "COMP-01",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "current_check.id",
+          "expected": "branch_pressure",
+          "actual": "branch_pressure",
+          "passed": true,
+          "step": 1,
+          "action": "feedback"
+        },
+        {
+          "path": "current_check.target_ids",
+          "expected": [
+            "BR-A",
+            "BR-B"
+          ],
+          "actual": [
+            "BR-A",
+            "BR-B"
+          ],
+          "passed": true,
+          "step": 1,
+          "action": "feedback"
+        }
+      ],
+      "final_status": "checking",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 638.04
+    },
+    {
+      "id": "all-checks-normal",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "current_check.id",
+          "expected": "source_pressure",
+          "actual": "source_pressure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "step": 2,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "step": 3,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "handoff",
+          "actual": "handoff",
+          "passed": true,
+          "step": 3,
+          "action": "feedback"
+        },
+        {
+          "path": "current_check",
+          "expected": null,
+          "actual": null,
+          "passed": true,
+          "step": 3,
+          "action": "feedback"
+        }
+      ],
+      "final_status": "handoff",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 784.15
+    },
+    {
+      "id": "unknown-check",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "current_check.id",
+          "expected": "source_pressure",
+          "actual": "source_pressure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "handoff",
+          "actual": "handoff",
+          "passed": true,
+          "step": 1,
+          "action": "feedback"
+        },
+        {
+          "step": 2,
+          "action": "confirm",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "handed_off",
+          "actual": "handed_off",
+          "passed": true,
+          "step": 2,
+          "action": "confirm"
+        }
+      ],
+      "final_status": "handed_off",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 705.21
+    },
+    {
+      "id": "early-confirm",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "current_check.id",
+          "expected": "source_pressure",
+          "actual": "source_pressure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "confirm",
+          "path": "http_status",
+          "expected": 400,
+          "actual": 400,
+          "passed": true
+        },
+        {
+          "step": 1,
+          "path": "rejected_revision_unchanged",
+          "expected": 0,
+          "actual": 0,
+          "passed": true
+        }
+      ],
+      "final_status": "checking",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 641.86
+    },
+    {
+      "id": "wrong-check",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "current_check.id",
+          "expected": "source_pressure",
+          "actual": "source_pressure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 400,
+          "actual": 400,
+          "passed": true
+        },
+        {
+          "step": 1,
+          "path": "rejected_revision_unchanged",
+          "expected": 0,
+          "actual": 0,
+          "passed": true
+        }
+      ],
+      "final_status": "checking",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 642.63
+    },
+    {
+      "id": "stale-revision",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "current_check.id",
+          "expected": "source_pressure",
+          "actual": "source_pressure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 409,
+          "actual": 409,
+          "passed": true
+        },
+        {
+          "step": 1,
+          "path": "rejected_revision_unchanged",
+          "expected": 0,
+          "actual": 0,
+          "passed": true
+        }
+      ],
+      "final_status": "checking",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 614.18
+    },
+    {
+      "id": "duplicate-check",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "current_check.id",
+          "expected": "source_pressure",
+          "actual": "source_pressure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "step": 2,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 400,
+          "actual": 400,
+          "passed": true
+        },
+        {
+          "step": 2,
+          "path": "rejected_revision_unchanged",
+          "expected": 1,
+          "actual": 1,
+          "passed": true
+        }
+      ],
+      "final_status": "checking",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 677.98
+    },
+    {
+      "id": "confirm-no-closure",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "current_check.id",
+          "expected": "source_pressure",
+          "actual": "source_pressure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "step": 2,
+          "action": "confirm",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "repairing",
+          "actual": "repairing",
+          "passed": true,
+          "step": 2,
+          "action": "confirm"
+        },
+        {
+          "step": 3,
+          "action": "verify",
+          "path": "http_status",
+          "expected": 400,
+          "actual": 400,
+          "passed": true
+        },
+        {
+          "step": 3,
+          "path": "rejected_revision_unchanged",
+          "expected": 2,
+          "actual": 2,
+          "passed": true
+        }
+      ],
+      "final_status": "repairing",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 723.0
+    },
+    {
+      "id": "restart-preserves-check",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "current_check.id",
+          "expected": "source_pressure",
+          "actual": "source_pressure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "step": 2,
+          "action": "restart",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "revision",
+          "expected": 1,
+          "actual": 1,
+          "passed": true,
+          "step": 2,
+          "action": "restart"
+        },
+        {
+          "path": "current_check.id",
+          "expected": "branch_pressure",
+          "actual": "branch_pressure",
+          "passed": true,
+          "step": 2,
+          "action": "restart"
+        },
+        {
+          "path": "checks.0.result",
+          "expected": "normal",
+          "actual": "normal",
+          "passed": true,
+          "step": 2,
+          "action": "restart"
+        }
+      ],
+      "final_status": "checking",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 985.21
+    },
+    {
+      "id": "repair-and-close",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "current_check.id",
+          "expected": "source_pressure",
+          "actual": "source_pressure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_confirmation",
+          "actual": "awaiting_confirmation",
+          "passed": true,
+          "step": 1,
+          "action": "feedback"
+        },
+        {
+          "step": 2,
+          "action": "confirm",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "repairing",
+          "actual": "repairing",
+          "passed": true,
+          "step": 2,
+          "action": "confirm"
+        },
+        {
+          "step": 3,
+          "action": "repair",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_verification",
+          "actual": "awaiting_verification",
+          "passed": true,
+          "step": 3,
+          "action": "repair"
+        },
+        {
+          "step": 4,
+          "action": "verify",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "resolved",
+          "actual": "resolved",
+          "passed": true,
+          "step": 4,
+          "action": "verify"
+        },
+        {
+          "step": 5,
+          "action": "export",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "session.status",
+          "expected": "resolved",
+          "actual": "resolved",
+          "passed": true,
+          "step": 5,
+          "action": "export"
+        },
+        {
+          "path": "events.4.type",
+          "expected": "verify",
+          "actual": "verify",
+          "passed": true,
+          "step": 5,
+          "action": "export"
+        }
+      ],
+      "final_status": "resolved",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 837.12
+    },
+    {
+      "id": "reject-missing-device",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "current_check.id",
+          "expected": "source_pressure",
+          "actual": "source_pressure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_confirmation",
+          "actual": "awaiting_confirmation",
+          "passed": true,
+          "step": 1,
+          "action": "feedback"
+        },
+        {
+          "step": 2,
+          "action": "confirm",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "repairing",
+          "actual": "repairing",
+          "passed": true,
+          "step": 2,
+          "action": "confirm"
+        },
+        {
+          "step": 3,
+          "action": "repair",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_verification",
+          "actual": "awaiting_verification",
+          "passed": true,
+          "step": 3,
+          "action": "repair"
+        },
+        {
+          "step": 4,
+          "action": "verify",
+          "path": "http_status",
+          "expected": 400,
+          "actual": 400,
+          "passed": true
+        },
+        {
+          "step": 4,
+          "path": "rejected_revision_unchanged",
+          "expected": 3,
+          "actual": 3,
+          "passed": true
+        },
+        {
+          "step": 5,
+          "action": "verify",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "resolved",
+          "actual": "resolved",
+          "passed": true,
+          "step": 5,
+          "action": "verify"
+        }
+      ],
+      "final_status": "resolved",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 866.77
+    },
+    {
+      "id": "reject-outside-range",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "current_check.id",
+          "expected": "source_pressure",
+          "actual": "source_pressure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_confirmation",
+          "actual": "awaiting_confirmation",
+          "passed": true,
+          "step": 1,
+          "action": "feedback"
+        },
+        {
+          "step": 2,
+          "action": "confirm",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "repairing",
+          "actual": "repairing",
+          "passed": true,
+          "step": 2,
+          "action": "confirm"
+        },
+        {
+          "step": 3,
+          "action": "repair",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_verification",
+          "actual": "awaiting_verification",
+          "passed": true,
+          "step": 3,
+          "action": "repair"
+        },
+        {
+          "step": 4,
+          "action": "verify",
+          "path": "http_status",
+          "expected": 400,
+          "actual": 400,
+          "passed": true
+        },
+        {
+          "step": 4,
+          "path": "rejected_revision_unchanged",
+          "expected": 3,
+          "actual": 3,
+          "passed": true
+        },
+        {
+          "step": 5,
+          "action": "verify",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "resolved",
+          "actual": "resolved",
+          "passed": true,
+          "step": 5,
+          "action": "verify"
+        }
+      ],
+      "final_status": "resolved",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 920.84
+    },
+    {
+      "id": "reject-tampered-range",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "current_check.id",
+          "expected": "source_pressure",
+          "actual": "source_pressure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_confirmation",
+          "actual": "awaiting_confirmation",
+          "passed": true,
+          "step": 1,
+          "action": "feedback"
+        },
+        {
+          "step": 2,
+          "action": "confirm",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "repairing",
+          "actual": "repairing",
+          "passed": true,
+          "step": 2,
+          "action": "confirm"
+        },
+        {
+          "step": 3,
+          "action": "repair",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_verification",
+          "actual": "awaiting_verification",
+          "passed": true,
+          "step": 3,
+          "action": "repair"
+        },
+        {
+          "step": 4,
+          "action": "verify",
+          "path": "http_status",
+          "expected": 400,
+          "actual": 400,
+          "passed": true
+        },
+        {
+          "step": 4,
+          "path": "rejected_revision_unchanged",
+          "expected": 3,
+          "actual": 3,
+          "passed": true
+        }
+      ],
+      "final_status": "awaiting_verification",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 786.41
+    },
+    {
+      "id": "reject-disabled-standard",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "current_check.id",
+          "expected": "source_pressure",
+          "actual": "source_pressure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_confirmation",
+          "actual": "awaiting_confirmation",
+          "passed": true,
+          "step": 1,
+          "action": "feedback"
+        },
+        {
+          "step": 2,
+          "action": "confirm",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "repairing",
+          "actual": "repairing",
+          "passed": true,
+          "step": 2,
+          "action": "confirm"
+        },
+        {
+          "step": 3,
+          "action": "repair",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_verification",
+          "actual": "awaiting_verification",
+          "passed": true,
+          "step": 3,
+          "action": "repair"
+        },
+        {
+          "step": 4,
+          "action": "standard_status",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "step": 5,
+          "action": "verify",
+          "path": "http_status",
+          "expected": 400,
+          "actual": 400,
+          "passed": true
+        },
+        {
+          "step": 5,
+          "path": "rejected_revision_unchanged",
+          "expected": 3,
+          "actual": 3,
+          "passed": true
+        }
+      ],
+      "final_status": "awaiting_verification",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 820.97
+    },
+    {
+      "id": "reject-disabled-source",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "current_check.id",
+          "expected": "source_pressure",
+          "actual": "source_pressure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_confirmation",
+          "actual": "awaiting_confirmation",
+          "passed": true,
+          "step": 1,
+          "action": "feedback"
+        },
+        {
+          "step": 2,
+          "action": "confirm",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "repairing",
+          "actual": "repairing",
+          "passed": true,
+          "step": 2,
+          "action": "confirm"
+        },
+        {
+          "step": 3,
+          "action": "repair",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_verification",
+          "actual": "awaiting_verification",
+          "passed": true,
+          "step": 3,
+          "action": "repair"
+        },
+        {
+          "step": 4,
+          "action": "document_status",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "step": 5,
+          "action": "verify",
+          "path": "http_status",
+          "expected": 400,
+          "actual": 400,
+          "passed": true
+        },
+        {
+          "step": 5,
+          "path": "rejected_revision_unchanged",
+          "expected": 3,
+          "actual": 3,
+          "passed": true
+        }
+      ],
+      "final_status": "awaiting_verification",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 782.97
+    },
+    {
+      "id": "alarm-closure-gate",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "current_check.id",
+          "expected": "source_pressure",
+          "actual": "source_pressure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_confirmation",
+          "actual": "awaiting_confirmation",
+          "passed": true,
+          "step": 1,
+          "action": "feedback"
+        },
+        {
+          "step": 2,
+          "action": "confirm",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "repairing",
+          "actual": "repairing",
+          "passed": true,
+          "step": 2,
+          "action": "confirm"
+        },
+        {
+          "step": 3,
+          "action": "repair",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_verification",
+          "actual": "awaiting_verification",
+          "passed": true,
+          "step": 3,
+          "action": "repair"
+        },
+        {
+          "step": 4,
+          "action": "verify",
+          "path": "http_status",
+          "expected": 400,
+          "actual": 400,
+          "passed": true
+        },
+        {
+          "step": 4,
+          "path": "rejected_revision_unchanged",
+          "expected": 3,
+          "actual": 3,
+          "passed": true
+        },
+        {
+          "step": 5,
+          "action": "clear_alarms",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "step": 6,
+          "action": "verify",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "resolved",
+          "actual": "resolved",
+          "passed": true,
+          "step": 6,
+          "action": "verify"
+        }
+      ],
+      "final_status": "resolved",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 934.26
+    },
+    {
+      "id": "failed-retest-repair-again",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "current_check.id",
+          "expected": "source_pressure",
+          "actual": "source_pressure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_confirmation",
+          "actual": "awaiting_confirmation",
+          "passed": true,
+          "step": 1,
+          "action": "feedback"
+        },
+        {
+          "step": 2,
+          "action": "confirm",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "repairing",
+          "actual": "repairing",
+          "passed": true,
+          "step": 2,
+          "action": "confirm"
+        },
+        {
+          "step": 3,
+          "action": "repair",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_verification",
+          "actual": "awaiting_verification",
+          "passed": true,
+          "step": 3,
+          "action": "repair"
+        },
+        {
+          "step": 4,
+          "action": "verify",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "repairing",
+          "actual": "repairing",
+          "passed": true,
+          "step": 4,
+          "action": "verify"
+        },
+        {
+          "step": 5,
+          "action": "repair",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_verification",
+          "actual": "awaiting_verification",
+          "passed": true,
+          "step": 5,
+          "action": "repair"
+        },
+        {
+          "step": 6,
+          "action": "verify",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "resolved",
+          "actual": "resolved",
+          "passed": true,
+          "step": 6,
+          "action": "verify"
+        }
+      ],
+      "final_status": "resolved",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 879.63
+    },
+    {
+      "id": "unknown-retest-handoff",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "current_check.id",
+          "expected": "source_pressure",
+          "actual": "source_pressure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_confirmation",
+          "actual": "awaiting_confirmation",
+          "passed": true,
+          "step": 1,
+          "action": "feedback"
+        },
+        {
+          "step": 2,
+          "action": "confirm",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "repairing",
+          "actual": "repairing",
+          "passed": true,
+          "step": 2,
+          "action": "confirm"
+        },
+        {
+          "step": 3,
+          "action": "repair",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_verification",
+          "actual": "awaiting_verification",
+          "passed": true,
+          "step": 3,
+          "action": "repair"
+        },
+        {
+          "step": 4,
+          "action": "verify",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "handoff",
+          "actual": "handoff",
+          "passed": true,
+          "step": 4,
+          "action": "verify"
+        }
+      ],
+      "final_status": "handoff",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 804.58
+    },
+    {
+      "id": "restart-preserves-repair",
+      "category": "workflow",
+      "model_mode": "rule",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "current_check.id",
+          "expected": "source_pressure",
+          "actual": "source_pressure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_confirmation",
+          "actual": "awaiting_confirmation",
+          "passed": true,
+          "step": 1,
+          "action": "feedback"
+        },
+        {
+          "step": 2,
+          "action": "confirm",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "repairing",
+          "actual": "repairing",
+          "passed": true,
+          "step": 2,
+          "action": "confirm"
+        },
+        {
+          "step": 3,
+          "action": "repair",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_verification",
+          "actual": "awaiting_verification",
+          "passed": true,
+          "step": 3,
+          "action": "repair"
+        },
+        {
+          "step": 4,
+          "action": "restart",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "awaiting_verification",
+          "actual": "awaiting_verification",
+          "passed": true,
+          "step": 4,
+          "action": "restart"
+        },
+        {
+          "path": "repairs.0.action",
+          "expected": "模拟完成授权维修",
+          "actual": "模拟完成授权维修",
+          "passed": true,
+          "step": 4,
+          "action": "restart"
+        },
+        {
+          "step": 5,
+          "action": "verify",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "resolved",
+          "actual": "resolved",
+          "passed": true,
+          "step": 5,
+          "action": "verify"
+        }
+      ],
+      "final_status": "resolved",
+      "model_validation": {
+        "status": "not_requested"
+      },
+      "elapsed_ms": 1273.97
+    },
+    {
+      "id": "model-unknown_id",
+      "category": "workflow",
+      "model_mode": "mock",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "mode",
+          "expected": "rule_demo",
+          "actual": "rule_demo",
+          "passed": true
+        },
+        {
+          "path": "model_explanation",
+          "expected": null,
+          "actual": null,
+          "passed": true
+        },
+        {
+          "path": "model_validation.status",
+          "expected": "rejected",
+          "actual": "rejected",
+          "passed": true
+        },
+        {
+          "path": "model_validation.code",
+          "expected": "unknown_evidence",
+          "actual": "unknown_evidence",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "handoff",
+          "actual": "handoff",
+          "passed": true,
+          "step": 1,
+          "action": "feedback"
+        }
+      ],
+      "final_status": "handoff",
+      "model_validation": {
+        "status": "rejected",
+        "code": "unknown_evidence"
+      },
+      "elapsed_ms": 714.15
+    },
+    {
+      "id": "model-changed_quote",
+      "category": "workflow",
+      "model_mode": "mock",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "mode",
+          "expected": "rule_demo",
+          "actual": "rule_demo",
+          "passed": true
+        },
+        {
+          "path": "model_explanation",
+          "expected": null,
+          "actual": null,
+          "passed": true
+        },
+        {
+          "path": "model_validation.status",
+          "expected": "rejected",
+          "actual": "rejected",
+          "passed": true
+        },
+        {
+          "path": "model_validation.code",
+          "expected": "quote_mismatch",
+          "actual": "quote_mismatch",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "handoff",
+          "actual": "handoff",
+          "passed": true,
+          "step": 1,
+          "action": "feedback"
+        }
+      ],
+      "final_status": "handoff",
+      "model_validation": {
+        "status": "rejected",
+        "code": "quote_mismatch"
+      },
+      "elapsed_ms": 801.02
+    },
+    {
+      "id": "model-unbound",
+      "category": "workflow",
+      "model_mode": "mock",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "mode",
+          "expected": "rule_demo",
+          "actual": "rule_demo",
+          "passed": true
+        },
+        {
+          "path": "model_explanation",
+          "expected": null,
+          "actual": null,
+          "passed": true
+        },
+        {
+          "path": "model_validation.status",
+          "expected": "rejected",
+          "actual": "rejected",
+          "passed": true
+        },
+        {
+          "path": "model_validation.code",
+          "expected": "invalid_structure",
+          "actual": "invalid_structure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "handoff",
+          "actual": "handoff",
+          "passed": true,
+          "step": 1,
+          "action": "feedback"
+        }
+      ],
+      "final_status": "handoff",
+      "model_validation": {
+        "status": "rejected",
+        "code": "invalid_structure"
+      },
+      "elapsed_ms": 721.68
+    },
+    {
+      "id": "model-legacy",
+      "category": "workflow",
+      "model_mode": "mock",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "mode",
+          "expected": "rule_demo",
+          "actual": "rule_demo",
+          "passed": true
+        },
+        {
+          "path": "model_explanation",
+          "expected": null,
+          "actual": null,
+          "passed": true
+        },
+        {
+          "path": "model_validation.status",
+          "expected": "rejected",
+          "actual": "rejected",
+          "passed": true
+        },
+        {
+          "path": "model_validation.code",
+          "expected": "invalid_structure",
+          "actual": "invalid_structure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "handoff",
+          "actual": "handoff",
+          "passed": true,
+          "step": 1,
+          "action": "feedback"
+        }
+      ],
+      "final_status": "handoff",
+      "model_validation": {
+        "status": "rejected",
+        "code": "invalid_structure"
+      },
+      "elapsed_ms": 709.83
+    },
+    {
+      "id": "model-extra_field",
+      "category": "workflow",
+      "model_mode": "mock",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "mode",
+          "expected": "rule_demo",
+          "actual": "rule_demo",
+          "passed": true
+        },
+        {
+          "path": "model_explanation",
+          "expected": null,
+          "actual": null,
+          "passed": true
+        },
+        {
+          "path": "model_validation.status",
+          "expected": "rejected",
+          "actual": "rejected",
+          "passed": true
+        },
+        {
+          "path": "model_validation.code",
+          "expected": "invalid_structure",
+          "actual": "invalid_structure",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "status",
+          "expected": "handoff",
+          "actual": "handoff",
+          "passed": true,
+          "step": 1,
+          "action": "feedback"
+        }
+      ],
+      "final_status": "handoff",
+      "model_validation": {
+        "status": "rejected",
+        "code": "invalid_structure"
+      },
+      "elapsed_ms": 651.03
+    },
+    {
+      "id": "model-timeout",
+      "category": "workflow",
+      "model_mode": "mock",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "mode",
+          "expected": "rule_demo",
+          "actual": "rule_demo",
+          "passed": true
+        },
+        {
+          "path": "model_validation.status",
+          "expected": "unavailable",
+          "actual": "unavailable",
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "feedback",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "current_check.id",
+          "expected": "branch_pressure",
+          "actual": "branch_pressure",
+          "passed": true,
+          "step": 1,
+          "action": "feedback"
+        }
+      ],
+      "final_status": "checking",
+      "model_validation": {
+        "status": "unavailable",
+        "code": "service_unavailable"
+      },
+      "elapsed_ms": 625.09
+    },
+    {
+      "id": "model-valid",
+      "category": "workflow",
+      "model_mode": "mock",
+      "passed": true,
+      "checks": [
+        {
+          "path": "status",
+          "expected": "checking",
+          "actual": "checking",
+          "passed": true
+        },
+        {
+          "path": "mode",
+          "expected": "model_assisted",
+          "actual": "model_assisted",
+          "passed": true
+        },
+        {
+          "path": "model_validation.status",
+          "expected": "anchored",
+          "actual": "anchored",
+          "passed": true
+        },
+        {
+          "path": "model_explanation.claims.0.citations.0.page",
+          "expected": 1,
+          "actual": 1,
+          "passed": true
+        },
+        {
+          "step": 1,
+          "action": "restart",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "mode",
+          "expected": "model_assisted",
+          "actual": "model_assisted",
+          "passed": true,
+          "step": 1,
+          "action": "restart"
+        },
+        {
+          "path": "model_explanation.validation.page_checked",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "step": 1,
+          "action": "restart"
+        },
+        {
+          "step": 2,
+          "action": "export",
+          "path": "http_status",
+          "expected": 200,
+          "actual": 200,
+          "passed": true
+        },
+        {
+          "path": "session.model_explanation.validation.scheme",
+          "expected": "exact-quotes-v1",
+          "actual": "exact-quotes-v1",
+          "passed": true,
+          "step": 2,
+          "action": "export"
+        }
+      ],
+      "final_status": "checking",
+      "model_validation": {
+        "status": "anchored",
+        "scheme": "exact-quotes-v1"
+      },
+      "elapsed_ms": 1011.03
+    }
+  ]
+}

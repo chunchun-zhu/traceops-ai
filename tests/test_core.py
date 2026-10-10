@@ -228,15 +228,18 @@ def test_model_outage_keeps_bm25(client, settings, monkeypatch):
 
 def test_invalid_model_citation_rejected(settings, monkeypatch):
     configured = settings.model_copy(update={"llm_base_url": "http://model/v1"})
-    gateway = http_gateway(configured, monkeypatch, lambda _: httpx.Response(200, json={"choices": [{"message": {"content": json.dumps({"summary": "虚构引用", "evidence_ids": ["invented"]})}}]}))
-    with pytest.raises(ModelUnavailable, match="引用"):
+    gateway = http_gateway(configured, monkeypatch, lambda _: httpx.Response(200, json={"choices": [{"message": {"content": json.dumps({"claims":[{"text":"虚构引用","citations":[{"evidence_id":"invented","quote":"共同供气需现场核验","start":0,"end":9}]}]})}}]}))
+    with pytest.raises(ModelUnavailable, match="引文") as exc:
         gateway.explain({"evidence": [{"id": "real"}]})
+    assert exc.value.code=="unknown_evidence"
 
 
 def test_model_valid_output(settings, monkeypatch):
     configured = settings.model_copy(update={"llm_base_url": "http://model/v1"})
-    gateway = http_gateway(configured, monkeypatch, lambda _: httpx.Response(200, json={"choices": [{"message": {"content": json.dumps({"summary": "共同供气需现场核验", "evidence_ids": ["real"]})}}]}))
-    assert gateway.explain({"evidence": [{"id": "real"}]})["evidence_ids"] == ["real"]
+    text="共同供气需现场核验"
+    gateway = http_gateway(configured, monkeypatch, lambda _: httpx.Response(200, json={"choices": [{"message": {"content": json.dumps({"claims":[{"text":text,"citations":[{"evidence_id":"real","quote":text,"start":0,"end":len(text)}]}]})}}]}))
+    source={"id":"real","text":text,"title":"测试","document_id":"doc","model":"P-200","version":"v1","page":1,"start":0,"end":len(text)}
+    assert gateway.explain({"evidence": [source]})["evidence_ids"] == ["real"]
 
 
 def test_mcp_protocol_lists_and_calls_real_tools(client, settings):

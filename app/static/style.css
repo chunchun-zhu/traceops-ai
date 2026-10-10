@@ -7,3 +7,6 @@
 .task-card{border-top:1px solid #d4ddd5;padding:16px 0}.task-card button{margin-right:8px}.alarm-row{display:flex;gap:12px;align-items:flex-start;border-bottom:1px solid #d4ddd5;padding:14px 0}.alarm-row input{width:auto;margin-top:4px}
 
 .source-preview{display:block;max-width:100%;max-height:480px;object-fit:contain;margin:16px auto;border:1px solid var(--border,#d7ddd8)}
+.claim-card{border-top:1px solid var(--border,#d7ddd8);padding:12px 0}
+.claim-card blockquote{margin:10px 0;padding:8px 12px;border-left:3px solid #637f70;white-space:pre-wrap}
+#source-content mark{background:#ffe3a2;color:#252c27}

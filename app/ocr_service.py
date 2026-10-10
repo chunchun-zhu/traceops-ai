@@ -93,7 +93,7 @@ def create_ocr_app(settings=None,engine_factory=None):
         if close:
             close()
 
-    app=FastAPI(title="溯障 · OCR 识别服务",version="0.5.0",lifespan=lifespan)
+    app=FastAPI(title="溯障 · OCR 识别服务",version="0.6.0",lifespan=lifespan)
 
     def authorize(authorization: str | None = Header(default=None)):
         if not secrets.compare_digest(authorization or "","Bearer "+settings.ocr_api_key):

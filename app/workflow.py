@@ -39,6 +39,7 @@ class GraphState(TypedDict, total=False):
     skill: dict
     retrieval_route: str
     model_explanation: dict | None
+    model_validation: dict
     confirmation: dict | None
     mode: str
     workflow_version: int
@@ -161,10 +162,11 @@ class Workflow:
                   "trace": state["trace"] + [{"node": "plan", "at": now(), "detail": f"加载技能 {self.skill['id']}@{self.skill['version']}"}]}
         if self.gateway.settings.llm_base_url:
             try:
-                explanation = self.gateway.explain({"symptom": state["symptom"], "topology": state["topology"], "observations": state["observations"], "evidence": state["evidence"]})
-                update.update(model_explanation=explanation, mode="model_assisted")
+                explanation = self.gateway.explain({"symptom": state["symptom"], "topology": state["topology"], "observations": state["observations"], "evidence": state["evidence"]}, self.store.document)
+                update.update(model_explanation=explanation, mode="model_assisted", model_validation={"status":"anchored","scheme":"exact-quotes-v1"})
             except ModelUnavailable as exc:
-                update.update(warnings=state["warnings"] + [str(exc) + "，保留规则检查流程"], mode="rule_demo")
+                update.update(warnings=state["warnings"] + [str(exc) + "，保留规则检查流程；模型结论须人工核验"], mode="rule_demo",
+                              model_explanation=None, model_validation={"status":"rejected" if exc.code != "service_unavailable" else "unavailable", "code":exc.code})
         return update
 
     def start(self, request: StartInput, actor=None):
@@ -182,7 +184,7 @@ class Workflow:
             "status": "new", "question": None, "candidates": [], "evidence": [], "topology": [],
             "observations": [], "checks": [], "current_check": None, "summary": "", "warnings": [], "trace": [],
             "skill": {"id": self.skill["id"], "version": self.skill["version"]}, "retrieval_route": "none",
-                "model_explanation": None, "confirmation": None, "mode": "rule_demo", "workflow_version": 3,
+                "model_explanation": None, "model_validation":{"status":"not_requested"}, "confirmation": None, "mode": "rule_demo", "workflow_version": 3,
                 "repairs": [], "verifications": [], "device_models": {}, "alarm_events": selected, "created_by": actor})
             self.graph.invoke(state, config=self.config(state["id"]))
             return self.sync(state["id"])

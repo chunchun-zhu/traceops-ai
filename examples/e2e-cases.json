@@ -1,0 +1,1761 @@
+{
+  "name": "供气排障与引用回归（模拟）",
+  "revision": "v1",
+  "kind": "synthetic",
+  "provenance": "项目自编模拟资料与状态契约；模型响应均为明确标记的接口替身，不是现场故障或模型准确率标注。",
+  "seed_demo": true,
+  "topology": {
+    "nodes": [
+      {
+        "id": "ISOLATED-01",
+        "name": "孤立设备（模拟）",
+        "kind": "device",
+        "model": "P-200"
+      }
+    ],
+    "edges": []
+  },
+  "documents": [
+    {
+      "title": "版本边界手册（模拟）",
+      "model": "TEST-MODEL",
+      "version": "v2",
+      "text": "E909 模拟供气检查条款，仅用于型号和版本过滤验收。"
+    }
+  ],
+  "retrieval": [
+    {
+      "id": "retrieval-1",
+      "query": "E101",
+      "model": "P-200",
+      "relevant_titles": [
+        "冲压机供气检查说明（模拟）"
+      ]
+    },
+    {
+      "id": "retrieval-2",
+      "query": "E201",
+      "model": "A-100",
+      "relevant_titles": [
+        "装配台供气检查说明（模拟）"
+      ]
+    },
+    {
+      "id": "retrieval-3",
+      "query": "多设备气压不足共同上游",
+      "model": "AIR-SYSTEM",
+      "relevant_titles": [
+        "公共供气关联排障说明（模拟）"
+      ]
+    },
+    {
+      "id": "retrieval-4",
+      "query": "初步判断与最终确认压力表故障",
+      "model": "AIR-SYSTEM",
+      "relevant_titles": [
+        "A 区低压维修工单（模拟）"
+      ]
+    },
+    {
+      "id": "retrieval-5",
+      "query": "先核对总管压力再核对支路压力",
+      "model": "P-200",
+      "relevant_titles": [
+        "冲压机供气检查说明（模拟）"
+      ]
+    },
+    {
+      "id": "retrieval-6",
+      "query": "记录测点读数时间核对型号版本",
+      "model": "AIR-SYSTEM",
+      "relevant_titles": [
+        "公共供气关联排障说明（模拟）"
+      ]
+    },
+    {
+      "id": "exact-v2",
+      "query": "E909",
+      "model": "TEST-MODEL",
+      "version": "v2",
+      "relevant_titles": [
+        "版本边界手册（模拟）"
+      ],
+      "expected_route": "exact_code"
+    },
+    {
+      "id": "empty-version",
+      "query": "E909",
+      "model": "TEST-MODEL",
+      "version": "v1",
+      "expect_empty": true
+    },
+    {
+      "id": "empty-model",
+      "query": "E909",
+      "model": "OTHER-MODEL",
+      "expect_empty": true
+    },
+    {
+      "id": "code-boundary",
+      "query": "E9090",
+      "model": "TEST-MODEL",
+      "expect_empty": true
+    },
+    {
+      "id": "unknown-code",
+      "query": "E99999",
+      "expect_empty": true
+    },
+    {
+      "id": "model-code-isolation",
+      "query": "E201",
+      "model": "P-200",
+      "expect_empty": true
+    }
+  ],
+  "workflows": [
+    {
+      "id": "initial-check",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "topology.0.node.id": "BR-A",
+        "mode": "rule_demo"
+      },
+      "steps": []
+    },
+    {
+      "id": "clarify-devices",
+      "start": {
+        "device_ids": [],
+        "symptom": "气压不足"
+      },
+      "expected": {
+        "status": "needs_info"
+      },
+      "steps": [
+        {
+          "action": "clarify",
+          "payload": {
+            "device_ids": [
+              "PRESS-01"
+            ]
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "checking",
+            "current_check.id": "source_pressure"
+          }
+        }
+      ]
+    },
+    {
+      "id": "unsupported-handoff",
+      "start": {
+        "device_ids": [
+          "PRESS-01"
+        ],
+        "symptom": "电机过热"
+      },
+      "expected": {
+        "status": "handoff"
+      },
+      "steps": [
+        {
+          "action": "confirm",
+          "payload": {
+            "decision": "handoff",
+            "operator": "评测人员",
+            "note": "模拟接管"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "handed_off"
+          }
+        }
+      ]
+    },
+    {
+      "id": "missing-documents",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "handoff",
+        "evidence": []
+      },
+      "steps": [],
+      "disabled_document_models": [
+        "AIR-SYSTEM",
+        "P-200",
+        "A-100"
+      ]
+    },
+    {
+      "id": "disconnected-device",
+      "start": {
+        "device_ids": [
+          "ISOLATED-01"
+        ],
+        "symptom": "气压不足"
+      },
+      "expected": {
+        "status": "handoff",
+        "topology": []
+      },
+      "steps": []
+    },
+    {
+      "id": "cross-branch",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "CNC-01"
+        ],
+        "symptom": "同时供气压力不足"
+      },
+      "expected": {
+        "status": "checking",
+        "topology.0.node.id": "COMP-01"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "normal",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "current_check.id": "branch_pressure",
+            "current_check.target_ids": [
+              "BR-A",
+              "BR-B"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "all-checks-normal",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "current_check.id": "source_pressure"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "normal",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {}
+        },
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "normal",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {}
+        },
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "normal",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "handoff",
+            "current_check": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "unknown-check",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "current_check.id": "source_pressure"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "unknown",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "handoff"
+          }
+        },
+        {
+          "action": "confirm",
+          "payload": {
+            "decision": "handoff",
+            "operator": "评测人员",
+            "note": "无法核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "handed_off"
+          }
+        }
+      ]
+    },
+    {
+      "id": "early-confirm",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "current_check.id": "source_pressure"
+      },
+      "steps": [
+        {
+          "action": "confirm",
+          "payload": {
+            "decision": "confirmed",
+            "operator": "评测人员",
+            "note": "提前确认"
+          },
+          "expected_http": 400,
+          "expected": {}
+        }
+      ]
+    },
+    {
+      "id": "wrong-check",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "current_check.id": "source_pressure"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "not-current",
+            "result": "normal"
+          },
+          "expected_http": 400,
+          "expected": {}
+        }
+      ]
+    },
+    {
+      "id": "stale-revision",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "current_check.id": "source_pressure"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "normal",
+            "expected_revision": 99
+          },
+          "expected_http": 409,
+          "expected": {}
+        }
+      ]
+    },
+    {
+      "id": "duplicate-check",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "current_check.id": "source_pressure"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "normal",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {}
+        },
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "source_pressure",
+            "result": "normal"
+          },
+          "expected_http": 400,
+          "expected": {}
+        }
+      ]
+    },
+    {
+      "id": "confirm-no-closure",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "current_check.id": "source_pressure"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "abnormal",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {}
+        },
+        {
+          "action": "confirm",
+          "payload": {
+            "decision": "confirmed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟独立核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "repairing"
+          }
+        },
+        {
+          "action": "verify",
+          "payload": {
+            "result": "passed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟复测",
+            "alarms_cleared": true,
+            "readings": [
+              {
+                "device_id": "PRESS-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:P-200}",
+                "standard_id": "${standard:P-200}"
+              },
+              {
+                "device_id": "ASSY-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:A-100}",
+                "standard_id": "${standard:A-100}"
+              }
+            ]
+          },
+          "expected_http": 400,
+          "expected": {}
+        }
+      ]
+    },
+    {
+      "id": "restart-preserves-check",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "current_check.id": "source_pressure"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "normal",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {}
+        },
+        {
+          "action": "restart",
+          "payload": {},
+          "expected_http": 200,
+          "expected": {
+            "revision": 1,
+            "current_check.id": "branch_pressure",
+            "checks.0.result": "normal"
+          }
+        }
+      ]
+    },
+    {
+      "id": "repair-and-close",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "current_check.id": "source_pressure"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "abnormal",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_confirmation"
+          }
+        },
+        {
+          "action": "confirm",
+          "payload": {
+            "decision": "confirmed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟独立核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "repairing"
+          }
+        },
+        {
+          "action": "repair",
+          "payload": {
+            "operator": "评测班组（模拟）",
+            "action": "模拟完成授权维修",
+            "completed_at": "${now}"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_verification"
+          }
+        },
+        {
+          "action": "verify",
+          "payload": {
+            "result": "passed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟复测",
+            "alarms_cleared": true,
+            "readings": [
+              {
+                "device_id": "PRESS-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:P-200}",
+                "standard_id": "${standard:P-200}"
+              },
+              {
+                "device_id": "ASSY-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:A-100}",
+                "standard_id": "${standard:A-100}"
+              }
+            ]
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "resolved"
+          }
+        },
+        {
+          "action": "export",
+          "payload": {},
+          "expected_http": 200,
+          "expected": {
+            "session.status": "resolved",
+            "events.4.type": "verify"
+          }
+        }
+      ]
+    },
+    {
+      "id": "reject-missing-device",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "current_check.id": "source_pressure"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "abnormal",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_confirmation"
+          }
+        },
+        {
+          "action": "confirm",
+          "payload": {
+            "decision": "confirmed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟独立核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "repairing"
+          }
+        },
+        {
+          "action": "repair",
+          "payload": {
+            "operator": "评测班组（模拟）",
+            "action": "模拟完成授权维修",
+            "completed_at": "${now}"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_verification"
+          }
+        },
+        {
+          "action": "verify",
+          "payload": {
+            "result": "passed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟复测",
+            "alarms_cleared": true,
+            "readings": [
+              {
+                "device_id": "PRESS-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:P-200}",
+                "standard_id": "${standard:P-200}"
+              }
+            ]
+          },
+          "expected_http": 400,
+          "expected": {}
+        },
+        {
+          "action": "verify",
+          "payload": {
+            "result": "passed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟复测",
+            "alarms_cleared": true,
+            "readings": [
+              {
+                "device_id": "PRESS-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:P-200}",
+                "standard_id": "${standard:P-200}"
+              },
+              {
+                "device_id": "ASSY-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:A-100}",
+                "standard_id": "${standard:A-100}"
+              }
+            ]
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "resolved"
+          }
+        }
+      ]
+    },
+    {
+      "id": "reject-outside-range",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "current_check.id": "source_pressure"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "abnormal",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_confirmation"
+          }
+        },
+        {
+          "action": "confirm",
+          "payload": {
+            "decision": "confirmed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟独立核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "repairing"
+          }
+        },
+        {
+          "action": "repair",
+          "payload": {
+            "operator": "评测班组（模拟）",
+            "action": "模拟完成授权维修",
+            "completed_at": "${now}"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_verification"
+          }
+        },
+        {
+          "action": "verify",
+          "payload": {
+            "result": "passed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟复测",
+            "alarms_cleared": true,
+            "readings": [
+              {
+                "device_id": "PRESS-01",
+                "value": 0.9,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:P-200}",
+                "standard_id": "${standard:P-200}"
+              },
+              {
+                "device_id": "ASSY-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:A-100}",
+                "standard_id": "${standard:A-100}"
+              }
+            ]
+          },
+          "expected_http": 400,
+          "expected": {}
+        },
+        {
+          "action": "verify",
+          "payload": {
+            "result": "passed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟复测",
+            "alarms_cleared": true,
+            "readings": [
+              {
+                "device_id": "PRESS-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:P-200}",
+                "standard_id": "${standard:P-200}"
+              },
+              {
+                "device_id": "ASSY-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:A-100}",
+                "standard_id": "${standard:A-100}"
+              }
+            ]
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "resolved"
+          }
+        }
+      ]
+    },
+    {
+      "id": "reject-tampered-range",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "current_check.id": "source_pressure"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "abnormal",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_confirmation"
+          }
+        },
+        {
+          "action": "confirm",
+          "payload": {
+            "decision": "confirmed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟独立核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "repairing"
+          }
+        },
+        {
+          "action": "repair",
+          "payload": {
+            "operator": "评测班组（模拟）",
+            "action": "模拟完成授权维修",
+            "completed_at": "${now}"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_verification"
+          }
+        },
+        {
+          "action": "verify",
+          "payload": {
+            "result": "passed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟复测",
+            "alarms_cleared": true,
+            "readings": [
+              {
+                "device_id": "PRESS-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 1.0,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:P-200}",
+                "standard_id": "${standard:P-200}"
+              },
+              {
+                "device_id": "ASSY-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:A-100}",
+                "standard_id": "${standard:A-100}"
+              }
+            ]
+          },
+          "expected_http": 400,
+          "expected": {}
+        }
+      ]
+    },
+    {
+      "id": "reject-disabled-standard",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "current_check.id": "source_pressure"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "abnormal",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_confirmation"
+          }
+        },
+        {
+          "action": "confirm",
+          "payload": {
+            "decision": "confirmed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟独立核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "repairing"
+          }
+        },
+        {
+          "action": "repair",
+          "payload": {
+            "operator": "评测班组（模拟）",
+            "action": "模拟完成授权维修",
+            "completed_at": "${now}"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_verification"
+          }
+        },
+        {
+          "action": "standard_status",
+          "payload": {
+            "active": false
+          },
+          "expected_http": 200,
+          "expected": {},
+          "target_model": "P-200"
+        },
+        {
+          "action": "verify",
+          "payload": {
+            "result": "passed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟复测",
+            "alarms_cleared": true,
+            "readings": [
+              {
+                "device_id": "PRESS-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:P-200}",
+                "standard_id": "${standard:P-200}"
+              },
+              {
+                "device_id": "ASSY-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:A-100}",
+                "standard_id": "${standard:A-100}"
+              }
+            ]
+          },
+          "expected_http": 400,
+          "expected": {}
+        }
+      ]
+    },
+    {
+      "id": "reject-disabled-source",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "current_check.id": "source_pressure"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "abnormal",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_confirmation"
+          }
+        },
+        {
+          "action": "confirm",
+          "payload": {
+            "decision": "confirmed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟独立核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "repairing"
+          }
+        },
+        {
+          "action": "repair",
+          "payload": {
+            "operator": "评测班组（模拟）",
+            "action": "模拟完成授权维修",
+            "completed_at": "${now}"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_verification"
+          }
+        },
+        {
+          "action": "document_status",
+          "payload": {
+            "active": false
+          },
+          "expected_http": 200,
+          "expected": {},
+          "target_model": "P-200"
+        },
+        {
+          "action": "verify",
+          "payload": {
+            "result": "passed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟复测",
+            "alarms_cleared": true,
+            "readings": [
+              {
+                "device_id": "PRESS-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:P-200}",
+                "standard_id": "${standard:P-200}"
+              },
+              {
+                "device_id": "ASSY-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:A-100}",
+                "standard_id": "${standard:A-100}"
+              }
+            ]
+          },
+          "expected_http": 400,
+          "expected": {}
+        }
+      ]
+    },
+    {
+      "id": "alarm-closure-gate",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "current_check.id": "source_pressure"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "abnormal",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_confirmation"
+          }
+        },
+        {
+          "action": "confirm",
+          "payload": {
+            "decision": "confirmed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟独立核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "repairing"
+          }
+        },
+        {
+          "action": "repair",
+          "payload": {
+            "operator": "评测班组（模拟）",
+            "action": "模拟完成授权维修",
+            "completed_at": "${now}"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_verification"
+          }
+        },
+        {
+          "action": "verify",
+          "payload": {
+            "result": "passed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟复测",
+            "alarms_cleared": true,
+            "readings": [
+              {
+                "device_id": "PRESS-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:P-200}",
+                "standard_id": "${standard:P-200}"
+              },
+              {
+                "device_id": "ASSY-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:A-100}",
+                "standard_id": "${standard:A-100}"
+              }
+            ]
+          },
+          "expected_http": 400,
+          "expected": {}
+        },
+        {
+          "action": "clear_alarms",
+          "payload": {},
+          "expected_http": 200,
+          "expected": {}
+        },
+        {
+          "action": "verify",
+          "payload": {
+            "result": "passed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟复测",
+            "alarms_cleared": true,
+            "readings": [
+              {
+                "device_id": "PRESS-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:P-200}",
+                "standard_id": "${standard:P-200}"
+              },
+              {
+                "device_id": "ASSY-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:A-100}",
+                "standard_id": "${standard:A-100}"
+              }
+            ]
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "resolved"
+          }
+        }
+      ],
+      "with_alarms": true
+    },
+    {
+      "id": "failed-retest-repair-again",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "current_check.id": "source_pressure"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "abnormal",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_confirmation"
+          }
+        },
+        {
+          "action": "confirm",
+          "payload": {
+            "decision": "confirmed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟独立核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "repairing"
+          }
+        },
+        {
+          "action": "repair",
+          "payload": {
+            "operator": "评测班组（模拟）",
+            "action": "模拟完成授权维修",
+            "completed_at": "${now}"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_verification"
+          }
+        },
+        {
+          "action": "verify",
+          "payload": {
+            "result": "failed",
+            "operator": "评测人员",
+            "note": "模拟复测失败",
+            "alarms_cleared": false,
+            "readings": []
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "repairing"
+          }
+        },
+        {
+          "action": "repair",
+          "payload": {
+            "operator": "评测班组（模拟）",
+            "action": "模拟完成授权维修",
+            "completed_at": "${now}"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_verification"
+          }
+        },
+        {
+          "action": "verify",
+          "payload": {
+            "result": "passed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟复测",
+            "alarms_cleared": true,
+            "readings": [
+              {
+                "device_id": "PRESS-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:P-200}",
+                "standard_id": "${standard:P-200}"
+              },
+              {
+                "device_id": "ASSY-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:A-100}",
+                "standard_id": "${standard:A-100}"
+              }
+            ]
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "resolved"
+          }
+        }
+      ]
+    },
+    {
+      "id": "unknown-retest-handoff",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "current_check.id": "source_pressure"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "abnormal",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_confirmation"
+          }
+        },
+        {
+          "action": "confirm",
+          "payload": {
+            "decision": "confirmed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟独立核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "repairing"
+          }
+        },
+        {
+          "action": "repair",
+          "payload": {
+            "operator": "评测班组（模拟）",
+            "action": "模拟完成授权维修",
+            "completed_at": "${now}"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_verification"
+          }
+        },
+        {
+          "action": "verify",
+          "payload": {
+            "result": "unknown",
+            "operator": "评测人员",
+            "note": "模拟无法复测",
+            "alarms_cleared": false,
+            "readings": []
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "handoff"
+          }
+        }
+      ]
+    },
+    {
+      "id": "restart-preserves-repair",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "current_check.id": "source_pressure"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "abnormal",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_confirmation"
+          }
+        },
+        {
+          "action": "confirm",
+          "payload": {
+            "decision": "confirmed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟独立核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "repairing"
+          }
+        },
+        {
+          "action": "repair",
+          "payload": {
+            "operator": "评测班组（模拟）",
+            "action": "模拟完成授权维修",
+            "completed_at": "${now}"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_verification"
+          }
+        },
+        {
+          "action": "restart",
+          "payload": {},
+          "expected_http": 200,
+          "expected": {
+            "status": "awaiting_verification",
+            "repairs.0.action": "模拟完成授权维修"
+          }
+        },
+        {
+          "action": "verify",
+          "payload": {
+            "result": "passed",
+            "operator": "评测班组（模拟）",
+            "note": "模拟复测",
+            "alarms_cleared": true,
+            "readings": [
+              {
+                "device_id": "PRESS-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:P-200}",
+                "standard_id": "${standard:P-200}"
+              },
+              {
+                "device_id": "ASSY-01",
+                "value": 0.7,
+                "minimum": 0.6,
+                "maximum": 0.8,
+                "observed_at": "${now}",
+                "reference_document_id": "${document:A-100}",
+                "standard_id": "${standard:A-100}"
+              }
+            ]
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "resolved"
+          }
+        }
+      ]
+    },
+    {
+      "id": "model-unknown_id",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "mode": "rule_demo",
+        "model_explanation": null,
+        "model_validation.status": "rejected",
+        "model_validation.code": "unknown_evidence"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "unknown",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "handoff"
+          }
+        }
+      ],
+      "model_fixture": "unknown_id"
+    },
+    {
+      "id": "model-changed_quote",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "mode": "rule_demo",
+        "model_explanation": null,
+        "model_validation.status": "rejected",
+        "model_validation.code": "quote_mismatch"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "unknown",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "handoff"
+          }
+        }
+      ],
+      "model_fixture": "changed_quote"
+    },
+    {
+      "id": "model-unbound",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "mode": "rule_demo",
+        "model_explanation": null,
+        "model_validation.status": "rejected",
+        "model_validation.code": "invalid_structure"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "unknown",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "handoff"
+          }
+        }
+      ],
+      "model_fixture": "unbound"
+    },
+    {
+      "id": "model-legacy",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "mode": "rule_demo",
+        "model_explanation": null,
+        "model_validation.status": "rejected",
+        "model_validation.code": "invalid_structure"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "unknown",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "handoff"
+          }
+        }
+      ],
+      "model_fixture": "legacy"
+    },
+    {
+      "id": "model-extra_field",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "mode": "rule_demo",
+        "model_explanation": null,
+        "model_validation.status": "rejected",
+        "model_validation.code": "invalid_structure"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "unknown",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "status": "handoff"
+          }
+        }
+      ],
+      "model_fixture": "extra_field"
+    },
+    {
+      "id": "model-timeout",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "mode": "rule_demo",
+        "model_validation.status": "unavailable"
+      },
+      "steps": [
+        {
+          "action": "feedback",
+          "payload": {
+            "check_id": "${check_id}",
+            "result": "normal",
+            "note": "模拟现场核验"
+          },
+          "expected_http": 200,
+          "expected": {
+            "current_check.id": "branch_pressure"
+          }
+        }
+      ],
+      "model_fixture": "timeout"
+    },
+    {
+      "id": "model-valid",
+      "start": {
+        "device_ids": [
+          "PRESS-01",
+          "ASSY-01"
+        ],
+        "symptom": "多设备气压不足 E101"
+      },
+      "expected": {
+        "status": "checking",
+        "mode": "model_assisted",
+        "model_validation.status": "anchored",
+        "model_explanation.claims.0.citations.0.page": 1
+      },
+      "steps": [
+        {
+          "action": "restart",
+          "payload": {},
+          "expected_http": 200,
+          "expected": {
+            "mode": "model_assisted",
+            "model_explanation.validation.page_checked": true
+          }
+        },
+        {
+          "action": "export",
+          "payload": {},
+          "expected_http": 200,
+          "expected": {
+            "session.model_explanation.validation.scheme": "exact-quotes-v1"
+          }
+        }
+      ],
+      "model_fixture": "valid"
+    }
+  ]
+}

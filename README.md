@@ -2,6 +2,14 @@
 
 项目一的可运行核心版本：资料导入、设备供气关系、证据检索、多轮检查、人工确认、维修复测及交接。模型部署由你完成，当前版本无需模型也能验证流程。
 
+## 0.6 逐条引文与端到端评测
+
+- 模型每条说明绑定逐字引文及切片位置，服务端复核完整页原文、版本与页码；任一条不符拒绝整份说明，保留规则与人工核验路径。
+- 页面逐条展示引用并高亮原文；旧说明保留为未按新规则校验。
+- 新增隔离 API 评测工具，默认运行 12 个检索与 31 个流程模拟案例，生成 JSON/Markdown 和失败详情，接入 Windows/Linux CI。
+
+引文定位校验不证明结论被原文支持。评测默认使用临时数据库、规则与明确标记的模型替身，不部署模型；说明与替换数据方法见 [评测指南](docs/evaluation-guide.md)。新模型响应契约为 claims，详见 [模型接入](docs/model-integration.md)。
+
 ## 0.5 PDF 表格与 OCR 接入
 
 - 文字层 PDF 直接提取表格，保留行列、空单元格、页面坐标和完整表格切片。
@@ -84,7 +92,7 @@ python -m venv .venv
 
 本版本没有部署模型，包括 OCR 模型；未搭建 Elasticsearch、Neo4j、PostgreSQL、TimescaleDB、Redis、Celery、MinIO 或 OpenTelemetry 后端。Docker 构建启动已在 GitHub Actions 验证，本机未运行容器。没有真实工业评测，不能沿用简历历史指标。
 
-当前使用 LangGraph 原生节点 checkpoint，等待人工输入时 interrupt，接口通过 Command(resume=...) 继续。节点结果保存后，业务投影写入失败可在下一次读取修复。正在执行而尚未保存 checkpoint 的节点可能重跑；不保证外部模型调用恰好一次。模型接入后只解释证据，不改变规则分支；引用校验只验证 id 存在，不自动证明引用内容支持结论。
+当前使用 LangGraph 原生节点 checkpoint，等待人工输入时 interrupt，接口通过 Command(resume=...) 继续。节点结果保存后，业务投影写入失败可在下一次读取修复。正在执行而尚未保存 checkpoint 的节点可能重跑；不保证外部模型调用恰好一次。模型接入后只解释证据，不改变规则分支；逐条引文核验精确文本、范围、页码和版本，不自动证明结论语义被引文支持。
 
 ## 文件布局
 
@@ -104,6 +112,8 @@ app/
   topology.py      图导入与供气路径查询
   workflow.py      LangGraph 全流程、人工中断与恢复
   models.py        后续模型服务的 HTTP 适配器
+  grounding.py     逐条引文、页原文与版本校验
+  evaluation.py    隔离 API 场景评测与报告
   mcp_server.py    MCP stdio 工具
   static/          浏览器工作台
 skills/            供气排障说明与检查配置
@@ -172,9 +182,12 @@ SUZHANG_RERANK_URL=http://127.0.0.1:8002/rerank
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
 .\.venv\Scripts\python.exe scripts/evaluate.py --output docs/retrieval-smoke.json
+.\.venv\Scripts\python.exe scripts/evaluate_e2e.py --output docs/evaluation-smoke.json --markdown docs/evaluation-smoke.md
 ```
 
 默认 6 条检索样本是模拟冒烟用例。标题标注级指标按前 K 个切片去重后计算 Hit、Recall、MRR，不应与切片级标注或简历的真实业务指标混用。替换 `--cases` 可使用自己的人工标注集。
+
+新增端到端工具默认 43 个模拟案例，临时库隔离当前业务数据；任一案例未符合预期时返回非零退出码。正负检索样本分别计分；流程通过率只表示预期匹配，不是诊断准确率。部署模型后可显式 `--live-models`，应使用匹配真实资料与预期的标注集。
 
 ## Docker
 

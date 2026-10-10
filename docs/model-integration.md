@@ -9,10 +9,14 @@
 响应中的 `choices[0].message.content` 必须为 JSON 字符串：
 
 ```json
-{"summary":"基于已有资料解释候选范围，仍需现场核验","evidence_ids":["实际提供的切片id"]}
+{"claims":[{"text":"该条款要求人工核对供气压力。","citations":[{"evidence_id":"实际提供的切片id","quote":"供气压力需人工核对","start":0,"end":9}]}]}
 ```
 
-生成上下文包含故障描述、供气路径、压力快照和检索证据。Pydantic 校验字段，引用须为实际上下文切片 id。不能正确返回结构或引用时降级为规则模式，不接受模型的任意状态修改与控制指令。模型部署应支持 JSON 输出，若服务的 chat template/参数不兼容，需要在 `app/models.py` 修改适配请求。
+示例引文只展示格式，实际必须来自上下文。start/end 是该切片 text 内的 Unicode 字符位置，包含 start、不包含 end，不是页内位置或 UTF-8 字节偏移。引文长度须等于 end-start，连续逐字匹配，至少 8 字符，最多 2000 字符。每条结论最多 5 处引文，共最多 8 条结论；根、结论和引文均禁止额外字段。不要返回摘要、页码、标题或版本；服务端核验后生成这些来源信息。
+
+生成上下文包含故障描述、供气路径、压力快照和检索证据；结论只解释文档候选，不以测点快照代替现场检查。服务端核验切片和完整页原文、有效资料与版本，保存 `validation.scheme=exact-quotes-v1` 与 `page_checked=true`。定位正确不代表语义支持成立，始终保留 `semantic_support=human_review_required`。任一条失败拒绝整份说明，状态记录为 rejected，并保留规则与人工核验路径；没有部分通过。
+
+0.6 起旧 summary/evidence_ids 协议不再接受新输出，历史记录仍保留并标为尚未逐条校验。模型部署应支持 JSON 输出；若服务参数不兼容，调整 `app/models.py` 适配请求。模型不改变工作流状态、复测标准或设备控制。
 
 ## 向量模型
 
@@ -56,8 +60,8 @@
 
 1. 先确认 `/api/health` 中对应配置为 true。这仅说明配置存在，不证明模型在线。
 2. 增量构建向量，检查 `/api/indexes` 的 `vectors_missing=0`。再检索不含明确故障码的描述，例如“多设备气压不足”，期望路径 `hybrid_rrf` 或 `hybrid_rrf+rerank`；故障码精确路由不会调用向量服务。
-3. 新建排障会话，检查 `mode=model_assisted`、`model_explanation` 和真实引用 id。
-4. 人工核对模型说明和引用文本是否一致，跑你自己的标注评测。
+3. 新建排障会话，检查 `mode=model_assisted`、`model_validation.status=anchored`、逐条 claims 及服务端生成的文档/页码/字符位置。
+4. 人工核对结论是否被引文支持、数值/单位与现场适用性，运行自己的 [端到端标注评测](evaluation-guide.md)。
 5. 服务不可用时检查 warnings；规则流程仍可进行，不会把降级隐藏为成功。
 
 各接口超时默认 20 秒，可设置 `SUZHANG_MODEL_TIMEOUT`。代码关闭环境代理继承，防止本地模型请求被代理转发。API key 分别使用 `SUZHANG_LLM_API_KEY`、`SUZHANG_EMBEDDING_API_KEY` 与 `SUZHANG_RERANK_API_KEY`，通过 Bearer 请求头发送。不要将 `.env` 纳入版本控制或交接压缩包。

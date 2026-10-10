@@ -72,7 +72,7 @@ def backup(db_path, destination):
                 with closing(sqlite3.connect(Path(str(source) + suffix).as_uri() + "?mode=ro", uri=True)) as src:
                     with closing(sqlite3.connect(staging / name)) as dst:
                         src.backup(dst)
-            manifest = {"format": 1, "created_at": now(), "application_version": "0.5.0",
+            manifest = {"format": 1, "created_at": now(), "application_version": "0.6.0",
                         "files": {name: digest(staging / name) for name in FILES}}
             (staging / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
             validate(staging)

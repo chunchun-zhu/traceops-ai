@@ -31,7 +31,7 @@ def split_page(text: str, max_chars: int = 1000):
         block = match.group().strip()
         is_heading = bool(re.match(r"^#{1,6}\s|^第[一二三四五六七八九十\d]+[章节]", block))
         if current and (is_heading or sum(len(x) for x in current) + len(block) > max_chars):
-            yield {"text": "\n\n".join(current), "start": start, "end": end, "section": heading}
+            yield {"text": text[start:end], "start": start, "end": end, "section": heading}
             current = []
         if is_heading:
             heading = block.splitlines()[0].lstrip("# ")
@@ -40,7 +40,7 @@ def split_page(text: str, max_chars: int = 1000):
         current.append(block)
         end = match.end()
     if current:
-        yield {"text": "\n\n".join(current), "start": start, "end": end, "section": heading}
+        yield {"text": text[start:end], "start": start, "end": end, "section": heading}
 
 
 def ingest(store: Store, meta: DocumentInput, pages: list[str] | None = None, filename: str | None = None, source_bytes=None):

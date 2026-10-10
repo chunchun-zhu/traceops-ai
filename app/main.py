@@ -65,7 +65,7 @@ def create_app(settings: Settings | None = None):
             finally:
                 service_lock.release()
 
-    app = FastAPI(title="溯障 · 设备诊断与协同排障", version="0.5.0", lifespan=lifespan)
+    app = FastAPI(title="溯障 · 设备诊断与协同排障", version="0.6.0", lifespan=lifespan)
     app.state.store, app.state.workflow = store, workflow
     app.state.tasks, app.state.operations = tasks, operations
     app.state.security = security
@@ -154,7 +154,7 @@ def create_app(settings: Settings | None = None):
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "version": "0.5.0", "llm_configured": bool(settings.llm_base_url),
+        return {"status": "ok", "version": "0.6.0", "llm_configured": bool(settings.llm_base_url),
                 "embedding_configured": bool(settings.embedding_base_url), "rerank_configured": bool(settings.rerank_url),
                 "authentication": settings.auth_mode == "accounts" or bool(settings.api_token), "auth_mode": settings.auth_mode, "demo_data": settings.seed_demo,
                 "ocr_configured":bool(settings.ocr_url),

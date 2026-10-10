@@ -35,6 +35,7 @@ jobs:
       - run: python -m compileall -q app scripts
       - run: node --check app/static/app.js
       - run: python -m pytest -q
+      - run: python scripts/evaluate_e2e.py --output docs/evaluation-ci.json --markdown docs/evaluation-ci.md
   container:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -49,7 +50,7 @@ jobs:
             if curl --fail --silent http://localhost:8080/api/health > /tmp/health.json; then break; fi
             sleep 2
           done
-          python -c "import json; h=json.load(open('/tmp/health.json')); assert h['status']=='ok' and h['task_worker_alive'] and h['version']=='0.5.0'"
+          python -c "import json; h=json.load(open('/tmp/health.json')); assert h['status']=='ok' and h['task_worker_alive'] and h['version']=='0.6.0'"
           curl --fail --silent http://localhost:8080/ > /tmp/index.html
           curl --fail --silent http://localhost:8080/api/devices > /tmp/devices.json
           python -c "import json; assert len(json.load(open('/tmp/devices.json'))) > 0"
