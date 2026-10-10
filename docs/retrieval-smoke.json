@@ -1,0 +1,81 @@
+{
+  "dataset": "D:\\Codex\\2026-10-10\\jian\\outputs\\suzhang\\examples\\retrieval-cases.json",
+  "note": "默认样本为模拟冒烟评测，不代表真实工厂效果或简历历史指标。",
+  "label_level": "document_title",
+  "cutoff": "top 5 chunks deduplicated into documents",
+  "sample_count": 6,
+  "Hit@5": 1.0,
+  "Recall@5": 1.0,
+  "MRR@5": 1.0,
+  "results": [
+    {
+      "query": "E101",
+      "hit": true,
+      "recall": 1.0,
+      "rr": 1.0,
+      "retrieved_titles": [
+        "冲压机供气检查说明（模拟）"
+      ],
+      "route": "exact_code",
+      "warnings": []
+    },
+    {
+      "query": "E201",
+      "hit": true,
+      "recall": 1.0,
+      "rr": 1.0,
+      "retrieved_titles": [
+        "装配台供气检查说明（模拟）"
+      ],
+      "route": "exact_code",
+      "warnings": []
+    },
+    {
+      "query": "多设备气压不足共同上游",
+      "hit": true,
+      "recall": 1.0,
+      "rr": 1.0,
+      "retrieved_titles": [
+        "公共供气关联排障说明（模拟）",
+        "A 区低压维修工单（模拟）"
+      ],
+      "route": "bm25",
+      "warnings": []
+    },
+    {
+      "query": "初步判断与最终确认压力表故障",
+      "hit": true,
+      "recall": 1.0,
+      "rr": 1.0,
+      "retrieved_titles": [
+        "A 区低压维修工单（模拟）",
+        "公共供气关联排障说明（模拟）"
+      ],
+      "route": "bm25",
+      "warnings": []
+    },
+    {
+      "query": "先核对总管压力再核对支路压力",
+      "hit": true,
+      "recall": 1.0,
+      "rr": 1.0,
+      "retrieved_titles": [
+        "冲压机供气检查说明（模拟）"
+      ],
+      "route": "bm25",
+      "warnings": []
+    },
+    {
+      "query": "记录测点读数时间核对型号版本",
+      "hit": true,
+      "recall": 1.0,
+      "rr": 1.0,
+      "retrieved_titles": [
+        "公共供气关联排障说明（模拟）",
+        "A 区低压维修工单（模拟）"
+      ],
+      "route": "bm25",
+      "warnings": []
+    }
+  ]
+}

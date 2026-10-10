@@ -1,0 +1,13 @@
+services:
+  suzhang:
+    build: .
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      SUZHANG_DB_PATH: /app/data/suzhang.db
+      SUZHANG_SEED_DEMO: "true"
+    volumes:
+      - suzhang_data:/app/data
+    restart: unless-stopped
+volumes:
+  suzhang_data:

@@ -1,0 +1,8 @@
+[
+  {"query": "E101", "model": "P-200", "relevant_titles": ["冲压机供气检查说明（模拟）"]},
+  {"query": "E201", "model": "A-100", "relevant_titles": ["装配台供气检查说明（模拟）"]},
+  {"query": "多设备气压不足共同上游", "model": "AIR-SYSTEM", "relevant_titles": ["公共供气关联排障说明（模拟）"]},
+  {"query": "初步判断与最终确认压力表故障", "model": "AIR-SYSTEM", "relevant_titles": ["A 区低压维修工单（模拟）"]},
+  {"query": "先核对总管压力再核对支路压力", "model": "P-200", "relevant_titles": ["冲压机供气检查说明（模拟）"]},
+  {"query": "记录测点读数时间核对型号版本", "model": "AIR-SYSTEM", "relevant_titles": ["公共供气关联排障说明（模拟）"]}
+]

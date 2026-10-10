@@ -1,0 +1,13 @@
+{
+  "id": "air-supply",
+  "version": "1.0.0",
+  "name": "供气关联排障",
+  "applicability": "台账内用气设备的供气压力异常；其他故障转人工",
+  "required_evidence": ["供气连接路径", "适用型号资料", "人工现场反馈"],
+  "checks": [
+    {"id": "source_pressure", "title": "核对总管压力", "instruction": "由授权人员读取总管现有压力表并记录读数；对照适用手册范围判断正常或异常。仅观察，不操作阀门。", "abnormal_candidate": "公共供气源或总管压力异常"},
+    {"id": "branch_pressure", "title": "核对共同支路压力", "instruction": "在总管已确认正常的前提下，读取共同支路现有压力表，记录与总管读数的差异；以适用手册判断是否异常。", "abnormal_candidate": "共同供气支路异常，需进一步核查"},
+    {"id": "device_pressure", "title": "核对设备入口与告警", "instruction": "在共同支路已确认正常的前提下，逐台记录设备入口压力、告警时间及故障码；核对各设备适用手册。", "abnormal_candidate": "设备入口或局部用气回路异常，需进一步核查"}
+  ],
+  "stop_conditions": ["任何检查无法核验时转人工", "出现异常时等待人工确认或接管", "检查全正常但告警持续时转人工"]
+}

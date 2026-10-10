@@ -1,0 +1,13 @@
+{
+  "nodes": [
+    {"id": "FACTORY-SOURCE-01", "name": "车间供气总管", "kind": "source", "model": "AIR-SYSTEM", "source": "现场核验"},
+    {"id": "FACTORY-BRANCH-A", "name": "车间 A 支路", "kind": "branch", "model": "AIR-SYSTEM", "source": "现场核验"},
+    {"id": "FACTORY-DEVICE-01", "name": "现场设备一", "kind": "device", "model": "REAL-MODEL-01", "source": "现场核验"},
+    {"id": "FACTORY-DEVICE-02", "name": "现场设备二", "kind": "device", "model": "REAL-MODEL-02", "source": "现场核验"}
+  ],
+  "edges": [
+    {"source": "FACTORY-SOURCE-01", "target": "FACTORY-BRANCH-A"},
+    {"source": "FACTORY-BRANCH-A", "target": "FACTORY-DEVICE-01"},
+    {"source": "FACTORY-BRANCH-A", "target": "FACTORY-DEVICE-02"}
+  ]
+}
