@@ -64,7 +64,21 @@ class Operations:
                 return item
         raise KeyError(standard_id)
 
-    def add_standard(self, request: StandardInput, is_demo=False):
+    def add_standard(self, request: StandardInput, is_demo=False, submitted_by=None, audit=None):
+        doc, start = self.check_source(request)
+        item = {**request.model_dump(),"id":uuid4().hex,"unit":"MPa","source_start":start,
+                "source_end":start+len(request.quote),"document_title":doc["title"],"document_version":doc["version"],
+                "approved_at":now(),"is_demo":is_demo}
+        if submitted_by:
+            item.update(review_status="pending", submitted_by=submitted_by,
+                        approved_by="", approved_at=None)
+        with self.store.connect() as db:
+            db.execute("INSERT INTO standards(id,active,payload) VALUES(?,?,?)",(item["id"],int(not submitted_by),json.dumps(item,ensure_ascii=False)))
+            if submitted_by and audit:
+                audit(submitted_by, "standard.submit", item["id"], db)
+        return {**item,"active":not bool(submitted_by)}
+
+    def check_source(self, request):
         doc = self.store.document(request.reference_document_id)
         if not doc["active"] or doc["kind"] != "manual" or doc["model"] not in {request.model,"AIR-SYSTEM"}:
             raise ValueError("标准须引用有效且型号适用的手册")
@@ -78,23 +92,45 @@ class Operations:
             start = text.index(request.quote)
         if text[start:start+len(request.quote)] != request.quote:
             raise ValueError("引用原文与资料页内容不一致")
-        item = {**request.model_dump(),"id":uuid4().hex,"unit":"MPa","source_start":start,
-                "source_end":start+len(request.quote),"document_title":doc["title"],"document_version":doc["version"],
-                "approved_at":now(),"is_demo":is_demo}
-        with self.store.connect() as db:
-            db.execute("INSERT INTO standards(id,payload) VALUES(?,?)",(item["id"],json.dumps(item,ensure_ascii=False)))
-        return {**item,"active":True}
+        return doc, start
 
-    def standard_status(self, standard_id, active):
+    def review_standard(self, standard_id, request, reviewer, audit=None):
+        item = self.standard(standard_id)
+        if item.get("review_status") != "pending":
+            raise ConflictError("仅待审标准可以审核；历史标准请重新提交")
+        if item["submitted_by"]["id"] == reviewer["id"]:
+            raise ValueError("提交人不能审核自己的标准")
+        # Recheck source activation and exact quote at approval time.
+        if request.decision == "approved":
+            self.check_source(StandardInput(**{**item,"approved_by":reviewer["username"]}))
+        item.pop("active", None)
+        item.update(review_status=request.decision, review_note=request.note, reviewed_by=reviewer,
+                    approved_by=f'{reviewer["display_name"]} ({reviewer["username"]})', approved_at=now())
+        with self.store.connect() as db:
+            db.execute("UPDATE standards SET active=?,payload=? WHERE id=?", (int(request.decision=="approved"),json.dumps(item,ensure_ascii=False),standard_id))
+            if audit:
+                audit(reviewer, "standard." + request.decision, standard_id, db)
+        return self.standard(standard_id)
+
+    def standard_status(self, standard_id, active, actor=None, audit=None):
+        item = self.standard(standard_id)
+        if active and actor and item.get("review_status") != "approved":
+            raise ValueError("账号模式下历史标准须重新提交审核")
+        if active and item.get("review_status", "approved") != "approved":
+            raise ValueError("待审或已拒绝的标准不能启用")
         with self.store.connect() as db:
             if db.execute("UPDATE standards SET active=? WHERE id=?",(int(active),standard_id)).rowcount != 1:
                 raise KeyError(standard_id)
+            if actor and audit:
+                audit(actor, "standard.enable" if active else "standard.disable", standard_id, db)
         return self.standard(standard_id)
 
     def validate_reading(self, reading, model):
         if not reading.standard_id:
             raise ValueError("通过复测须选择已审核的结构化标准")
         standard = self.standard(reading.standard_id)
+        if getattr(self, "require_trusted", False) and (standard.get("review_status") != "approved" or not standard.get("reviewed_by")):
+            raise ValueError("账号模式须使用由登录身份独立审核的标准，历史标准请重新提交")
         doc = self.store.document(standard["reference_document_id"])
         if not standard["active"] or not doc["active"] or standard["model"] not in {model,"AIR-SYSTEM"}:
             raise ValueError("复测标准已停用或型号不适用")

@@ -56,7 +56,10 @@ def get_alarm_events(device_id: str | None = None, since: str | None = None, unt
 def get_pressure_standards(model: str | None = None) -> dict:
     """读取有效、原文可追溯的复测标准；数值范围由人工核验。"""
     operations=Operations(store)
-    return {"items":[s for s in operations.standards() if s["active"] and operations.store.document(s["reference_document_id"])["active"] and (not model or s["model"] in {model,"AIR-SYSTEM"})],"source":"approved_pressure_standards"}
+    return {"items":[s for s in operations.standards() if s["active"] and
+                     (settings.auth_mode != "accounts" or (s.get("review_status") == "approved" and s.get("reviewed_by"))) and
+                     operations.store.document(s["reference_document_id"])["active"] and
+                     (not model or s["model"] in {model,"AIR-SYSTEM"})],"source":"approved_pressure_standards"}
 
 
 if __name__ == "__main__":

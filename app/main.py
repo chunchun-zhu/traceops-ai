@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile, Query
 from fastapi.responses import FileResponse, JSONResponse
+from filelock import FileLock
 from fastapi.staticfiles import StaticFiles
 
 from .config import ROOT, Settings
@@ -21,39 +22,99 @@ from .topology import Topology
 from .workflow import Workflow
 from .operations import Operations
 from .tasks import TaskQueue
+from .security import Security, LoginInput, UserInput, UserUpdate, PasswordInput, ReviewInput
+
+SERVICE_LOCKS = {}
 
 
 def create_app(settings: Settings | None = None):
     settings = settings or Settings()
-    store = Store(settings.resolved_db_path)
-    gateway = ModelGateway(settings)
-    retriever = Retriever(store, gateway)
-    workflow = Workflow(store, retriever, gateway)
-    operations = Operations(store)
-    tasks = TaskQueue(store, retriever.index)
+    settings.resolved_db_path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = str(settings.resolved_db_path.resolve()) + ".service.lock"
+    service_lock = SERVICE_LOCKS.setdefault(lock_path, FileLock(lock_path, timeout=0, thread_local=False))
+    # Initialization also honors offline maintenance; constructors perform migrations.
+    with service_lock:
+        store = Store(settings.resolved_db_path)
+        gateway = ModelGateway(settings)
+        retriever = Retriever(store, gateway)
+        workflow = Workflow(store, retriever, gateway)
+        operations = Operations(store)
+        tasks = TaskQueue(store, retriever.index)
+        security = Security(store)
+        workflow.operations.require_trusted = settings.auth_mode == "accounts"
 
     @asynccontextmanager
     async def lifespan(app):
-        if settings.seed_demo:
-            with workflow.lock:
-                seed(store)
-                seed_standards(operations)
-        tasks.start()
+        service_lock.acquire()
         try:
+            if settings.seed_demo:
+                with workflow.lock:
+                    seed(store)
+                    seed_standards(operations)
+            tasks.start()
             yield
         finally:
-            tasks.stop()
-            workflow.close()
+            try:
+                tasks.stop()
+                workflow.close()
+            finally:
+                service_lock.release()
 
-    app = FastAPI(title="溯障 · 设备诊断与协同排障", version="0.3.0", lifespan=lifespan)
+    app = FastAPI(title="溯障 · 设备诊断与协同排障", version="0.4.0", lifespan=lifespan)
     app.state.store, app.state.workflow = store, workflow
     app.state.tasks, app.state.operations = tasks, operations
+    app.state.security = security
 
-    def authorize(authorization: str | None = Header(default=None)):
+    def authorize(request: Request, authorization: str | None = Header(default=None)):
+        if settings.auth_mode == "accounts":
+            bearer_token = None
+            if authorization is not None:
+                if not authorization.startswith("Bearer ") or not authorization[7:].strip():
+                    raise HTTPException(401, "Bearer 令牌格式无效")
+                bearer_token = authorization[7:]
+            token = bearer_token or request.cookies.get("suzhang-session")
+            user = security.authenticate(token)
+            request.state.user = user
+            if request.method not in {"GET", "HEAD", "OPTIONS"}:
+                if bearer_token is None:
+                    check_origin(request)
+                path = request.url.path
+                readonly = path in {"/api/search", "/api/topology/common", "/api/auth/logout"}
+                if path.startswith("/api/admin/"):
+                    allowed = {"admin"}
+                elif path.endswith("/review") or (path.startswith("/api/standards/") and path.endswith("/status")):
+                    allowed = {"reviewer", "admin"}
+                elif path.startswith(("/api/documents", "/api/indexes", "/api/tasks")) or path == "/api/topology/import":
+                    allowed = {"admin"}
+                else:
+                    allowed = {"operator", "reviewer", "admin"}
+                if not readonly and user["role"] not in allowed:
+                    raise HTTPException(403, "当前角色无权执行此操作")
+            elif request.url.path.startswith("/api/admin/") and user["role"] != "admin":
+                raise HTTPException(403, "仅管理员可访问")
+            return user
         if settings.api_token:
             provided = (authorization or "").removeprefix("Bearer ")
             if not secrets.compare_digest(provided, settings.api_token):
                 raise HTTPException(401, "访问令牌无效或未提供")
+
+    def check_origin(request):
+        # Cookies are same-site strict; exact origin is additionally required for writes.
+        origin = request.headers.get("origin")
+        if origin != f"{request.base_url.scheme}://{request.base_url.netloc}":
+            raise HTTPException(403, "请求来源不匹配，请从本站页面操作")
+
+    def accounts_only():
+        if settings.auth_mode != "accounts":
+            raise HTTPException(404, "账号模式未启用")
+
+    def identified(payload, request):
+        if settings.auth_mode == "accounts":
+            return payload.model_copy(update={"operator": security.actor(request.state.user)})
+        return payload
+
+    def actor(request):
+        return request.state.user if settings.auth_mode == "accounts" else None
 
     @app.middleware("http")
     async def trace(request: Request, call_next):
@@ -63,6 +124,8 @@ def create_app(settings: Settings | None = None):
         elapsed = round((time.monotonic() - started) * 1000, 2)
         response.headers["X-Request-Id"] = request_id
         response.headers["Server-Timing"] = f"total;dur={elapsed}"
+        if request.url.path.startswith("/api/"):
+            response.headers["Cache-Control"] = "no-store"
         logging.getLogger("suzhang").info("request=%s method=%s path=%s status=%d duration_ms=%s", request_id, request.method, request.url.path, response.status_code, elapsed)
         return response
 
@@ -86,10 +149,59 @@ def create_app(settings: Settings | None = None):
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "version": "0.3.0", "llm_configured": bool(settings.llm_base_url),
+        return {"status": "ok", "version": "0.4.0", "llm_configured": bool(settings.llm_base_url),
                 "embedding_configured": bool(settings.embedding_base_url), "rerank_configured": bool(settings.rerank_url),
-                "authentication": bool(settings.api_token), "demo_data": settings.seed_demo,
+                "authentication": settings.auth_mode == "accounts" or bool(settings.api_token), "auth_mode": settings.auth_mode, "demo_data": settings.seed_demo,
                 "task_worker_alive": bool(tasks.thread and tasks.thread.is_alive())}
+
+    @app.post("/api/auth/login")
+    def login(payload: LoginInput, request: Request):
+        accounts_only()
+        check_origin(request)
+        token, user = security.login(payload, request.client.host if request.client else "unknown")
+        response = JSONResponse(user)
+        response.set_cookie("suzhang-session", token, httponly=True, secure=settings.cookie_secure, samesite="strict", max_age=43200, path="/")
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    @app.get("/api/auth/me", dependencies=auth)
+    def me(request: Request):
+        accounts_only()
+        return request.state.user
+
+    @app.post("/api/auth/logout", dependencies=auth)
+    def logout(request: Request):
+        accounts_only()
+        security.logout(request.headers.get("authorization", "").removeprefix("Bearer ") or request.cookies.get("suzhang-session"))
+        response = JSONResponse({"ok": True})
+        response.delete_cookie("suzhang-session", path="/")
+        return response
+
+    @app.get("/api/admin/users", dependencies=auth)
+    def users():
+        accounts_only()
+        return security.users()
+
+    @app.post("/api/admin/users", dependencies=auth)
+    def create_user(payload: UserInput, request: Request):
+        accounts_only()
+        return security.create_user(payload, request.state.user)
+
+    @app.post("/api/admin/users/{user_id}/status", dependencies=auth)
+    def user_status(user_id: str, payload: UserUpdate, request: Request):
+        accounts_only()
+        return security.update_user(user_id, payload, request.state.user)
+
+    @app.post("/api/admin/users/{user_id}/password", dependencies=auth)
+    def reset_password(user_id: str, payload: PasswordInput, request: Request):
+        accounts_only()
+        return security.reset_password(user_id, payload.password, request.state.user)
+
+    @app.get("/api/admin/audit", dependencies=auth)
+    def audit(limit: int = Query(default=100, ge=1, le=1000)):
+        accounts_only()
+        with store.connect() as db:
+            return [dict(r) for r in db.execute("SELECT * FROM audit_log ORDER BY id DESC LIMIT ?", (limit,))]
 
     @app.get("/api/devices", dependencies=auth)
     def devices():
@@ -202,22 +314,28 @@ def create_app(settings: Settings | None = None):
         return operations.standards()
 
     @app.post("/api/standards", dependencies=auth)
-    def add_standard(request: StandardInput):
+    def add_standard(request: StandardInput, http: Request):
         with workflow.lock:
-            return operations.add_standard(request)
+            return operations.add_standard(request, submitted_by=actor(http), audit=security.audit)
+
+    @app.post("/api/standards/{standard_id}/review", dependencies=auth)
+    def review_standard(standard_id: str, payload: ReviewInput, request: Request):
+        accounts_only()
+        with workflow.lock:
+            return operations.review_standard(standard_id, payload, request.state.user, audit=security.audit)
 
     @app.post("/api/standards/{standard_id}/status", dependencies=auth)
-    def standard_status(standard_id: str, request: DocumentStatusInput):
+    def standard_status(standard_id: str, request: DocumentStatusInput, http: Request):
         with workflow.lock:
-            return operations.standard_status(standard_id,request.active)
+            return operations.standard_status(standard_id,request.active,actor(http),security.audit)
 
     @app.post("/api/search", dependencies=auth)
     def search(request: SearchInput):
         return retriever.search(request.query, [request.model] if request.model else None, request.version, request.limit)
 
     @app.post("/api/sessions", dependencies=auth)
-    def start(request: StartInput):
-        return workflow.start(request)
+    def start(request: StartInput, http: Request):
+        return workflow.start(request, actor(http))
 
     @app.get("/api/sessions", dependencies=auth)
     def sessions():
@@ -232,24 +350,24 @@ def create_app(settings: Settings | None = None):
         return {"session": workflow.session(session_id), "events": store.events(session_id)}
 
     @app.post("/api/sessions/{session_id}/clarify", dependencies=auth)
-    def clarify(session_id: str, request: ClarifyInput):
-        return workflow.clarify(session_id, request)
+    def clarify(session_id: str, request: ClarifyInput, http: Request):
+        return workflow.clarify(session_id, request, actor(http))
 
     @app.post("/api/sessions/{session_id}/feedback", dependencies=auth)
-    def feedback(session_id: str, request: FeedbackInput):
-        return workflow.feedback(session_id, request)
+    def feedback(session_id: str, request: FeedbackInput, http: Request):
+        return workflow.feedback(session_id, request, actor(http))
 
     @app.post("/api/sessions/{session_id}/confirm", dependencies=auth)
-    def confirm(session_id: str, request: ConfirmInput):
-        return workflow.confirm(session_id, request)
+    def confirm(session_id: str, request: ConfirmInput, http: Request):
+        return workflow.confirm(session_id, identified(request, http), actor(http))
 
     @app.post("/api/sessions/{session_id}/repair", dependencies=auth)
-    def repair(session_id: str, request: RepairInput):
-        return workflow.repair(session_id, request)
+    def repair(session_id: str, request: RepairInput, http: Request):
+        return workflow.repair(session_id, identified(request, http), actor(http))
 
     @app.post("/api/sessions/{session_id}/verify", dependencies=auth)
-    def verify(session_id: str, request: VerifyInput):
-        return workflow.verify(session_id, request)
+    def verify(session_id: str, request: VerifyInput, http: Request):
+        return workflow.verify(session_id, identified(request, http), actor(http))
 
     app.mount("/static", StaticFiles(directory=ROOT / "app" / "static"), name="static")
 

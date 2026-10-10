@@ -4,4 +4,8 @@ __pycache__/
 .env
 data/*.db*
 data/uploads/
+data/backups/
+data/recovery*/
+data/*.lock
 docs/*preview.jpg
+docs/*preview.png

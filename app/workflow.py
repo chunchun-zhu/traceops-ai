@@ -46,6 +46,7 @@ class GraphState(TypedDict, total=False):
     verifications: list[dict]
     alarm_events: list[dict]
     device_models: dict[str, str]
+    created_by: dict | None
     _action: dict | None
     _event: dict
 
@@ -59,6 +60,7 @@ class Workflow:
         self.lock = FileLock(str(store.path) + ".workflow.lock", timeout=30)
         self.checkpoint_connection = sqlite3.connect(str(store.path) + ".checkpoints", check_same_thread=False, timeout=10)
         self.saver = SqliteSaver(self.checkpoint_connection)
+        self.saver.setup()
         builder = StateGraph(GraphState)
         builder.add_node("entry", lambda state: {})
         builder.add_node("identify", self.identify)
@@ -93,9 +95,10 @@ class Workflow:
         def apply(state):
             state = deepcopy(state)
             payload = state["_action"]["input"]
+            actor = state["_action"].get("actor")
             getattr(self, "apply_" + kind)(state, payload)
             state.update(revision=state["revision"] + 1, updated_at=now(), _action=None,
-                         _event={"type": {"clarify": "clarified", "confirm": "confirmation"}.get(kind, kind), "input": payload, "at": now()})
+                         _event={"type": {"clarify": "clarified", "confirm": "confirmation"}.get(kind, kind), "input": payload, "actor": actor, "at": now()})
             return state
         return apply
 
@@ -164,7 +167,7 @@ class Workflow:
                 update.update(warnings=state["warnings"] + [str(exc) + "，保留规则检查流程"], mode="rule_demo")
         return update
 
-    def start(self, request: StartInput):
+    def start(self, request: StartInput, actor=None):
         with self.lock:
             selected = self.operations.selected_alarms(request.alarm_ids) if request.alarm_ids else []
             if selected:
@@ -180,7 +183,7 @@ class Workflow:
             "observations": [], "checks": [], "current_check": None, "summary": "", "warnings": [], "trace": [],
             "skill": {"id": self.skill["id"], "version": self.skill["version"]}, "retrieval_route": "none",
                 "model_explanation": None, "confirmation": None, "mode": "rule_demo", "workflow_version": 3,
-                "repairs": [], "verifications": [], "device_models": {}, "alarm_events": selected})
+                "repairs": [], "verifications": [], "device_models": {}, "alarm_events": selected, "created_by": actor})
             self.graph.invoke(state, config=self.config(state["id"]))
             return self.sync(state["id"])
 
@@ -225,11 +228,11 @@ class Workflow:
             raise ConflictError("会话版本已变化，请重新载入")
         return state
 
-    def clarify(self, session_id, request: ClarifyInput):
-        return self.resume(session_id, "clarify", request)
+    def clarify(self, session_id, request: ClarifyInput, actor=None):
+        return self.resume(session_id, "clarify", request, actor)
 
-    def feedback(self, session_id, request: FeedbackInput):
-        return self.resume(session_id, "feedback", request)
+    def feedback(self, session_id, request: FeedbackInput, actor=None):
+        return self.resume(session_id, "feedback", request, actor)
 
     def apply_clarify(self, state, payload):
         state["device_ids"] = list(dict.fromkeys(payload["device_ids"]))
@@ -256,8 +259,8 @@ class Workflow:
         else:
             state.update(status="handoff", current_check=None, summary="预设压力检查均正常，尚不能解释故障，请人工扩展排查范围。")
 
-    def confirm(self, session_id, request: ConfirmInput):
-        return self.resume(session_id, "confirm", request)
+    def confirm(self, session_id, request: ConfirmInput, actor=None):
+        return self.resume(session_id, "confirm", request, actor)
 
     def apply_confirm(self, state, payload):
         request = ConfirmInput.model_validate(payload)
@@ -266,16 +269,16 @@ class Workflow:
                      summary="原因确认已记录；请补充授权人员完成的维修记录，随后进行复测。" if request.decision == "confirmed" else "已记录人工接管与交接说明。")
         state["trace"].append({"node": "human_confirmation", "at": now(), "detail": request.decision})
 
-    def repair(self, session_id, request: RepairInput):
-        return self.resume(session_id, "repair", request)
+    def repair(self, session_id, request: RepairInput, actor=None):
+        return self.resume(session_id, "repair", request, actor)
 
     def apply_repair(self, state, payload):
         state["repairs"].append({**payload, "at": now()})
         state.update(status="awaiting_verification", summary="维修记录已保存；请复测所有告警设备并核验告警是否消除。")
         state["trace"].append({"node": "repair", "at": now(), "detail": "人工维修完成，等待复测"})
 
-    def verify(self, session_id, request: VerifyInput):
-        return self.resume(session_id, "verify", request)
+    def verify(self, session_id, request: VerifyInput, actor=None):
+        return self.resume(session_id, "verify", request, actor)
 
     def apply_verify(self, state, payload):
         if payload["result"] == "passed":
@@ -336,12 +339,12 @@ class Workflow:
                 if request.result == "passed" and not reading.minimum <= reading.value <= reading.maximum:
                     raise ValueError("读数超出人工提供的适用范围，不能提交通过")
 
-    def resume(self, session_id, kind, request):
+    def resume(self, session_id, kind, request, actor=None):
         try:
             with self.lock:
                 state = self.load_current(session_id, request.expected_revision)
                 self.validate_action(state, kind, request)
-                self.graph.invoke(Command(resume={"kind": kind, "input": request.model_dump()}), config=self.config(session_id))
+                self.graph.invoke(Command(resume={"kind": kind, "input": request.model_dump(), "actor": actor}), config=self.config(session_id))
                 return self.sync(session_id)
         except Timeout as exc:
             raise ConflictError("工作流正在处理其他请求，请稍后载入重试") from exc

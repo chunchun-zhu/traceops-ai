@@ -1,0 +1,58 @@
+name: Core checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  LANGSMITH_TRACING: 'false'
+  LANGCHAIN_TRACING_V2: 'false'
+  SUZHANG_SEED_DEMO: 'true'
+jobs:
+  tests:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: requirements.lock.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m pip install -r requirements.lock.txt
+      - run: python -m pip check
+      - run: python -m compileall -q app scripts
+      - run: node --check app/static/app.js
+      - run: python -m pytest -q
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t suzhang-ci .
+      - name: Start and smoke test container
+        shell: bash
+        run: |
+          docker run -d --name suzhang-ci -p 8080:8080 -e LANGSMITH_TRACING=false -e LANGCHAIN_TRACING_V2=false suzhang-ci
+          for attempt in {1..30}; do
+            if curl --fail --silent http://localhost:8080/api/health > /tmp/health.json; then break; fi
+            sleep 2
+          done
+          python -c "import json; h=json.load(open('/tmp/health.json')); assert h['status']=='ok' and h['task_worker_alive'] and h['version']=='0.4.0'"
+          curl --fail --silent http://localhost:8080/ > /tmp/index.html
+          curl --fail --silent http://localhost:8080/api/devices > /tmp/devices.json
+          python -c "import json; assert len(json.load(open('/tmp/devices.json'))) > 0"
+      - name: Container logs
+        if: always()
+        run: docker logs suzhang-ci || true

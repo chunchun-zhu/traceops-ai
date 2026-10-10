@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -20,6 +21,8 @@ class Settings(BaseSettings):
     model_timeout: float = 20
     seed_demo: bool = True
     api_token: str = ""
+    auth_mode: Literal["legacy", "accounts"] = "legacy"
+    cookie_secure: bool = True
 
     @property
     def resolved_db_path(self) -> Path:
