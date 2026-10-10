@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Literal
+from pydantic import Field
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -23,6 +24,13 @@ class Settings(BaseSettings):
     api_token: str = ""
     auth_mode: Literal["legacy", "accounts"] = "legacy"
     cookie_secure: bool = True
+    ocr_url: str = ""
+    ocr_api_key: str = ""
+    ocr_timeout: float = Field(default=120, ge=1, le=600)
+    ocr_dpi: int = Field(default=150, ge=72, le=300)
+    ocr_device: str = "cpu"
+    ocr_paddlex_config: str = ""
+    ocr_model_version: str = Field(default="",max_length=64)
 
     @property
     def resolved_db_path(self) -> Path:

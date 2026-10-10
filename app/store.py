@@ -59,6 +59,9 @@ class Store:
                     id TEXT PRIMARY KEY, document_id TEXT NOT NULL REFERENCES documents(id),
                     model TEXT NOT NULL, version TEXT NOT NULL, payload TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS document_assets (
+                    document_id TEXT PRIMARY KEY REFERENCES documents(id), content BLOB NOT NULL
+                );
                 CREATE TABLE IF NOT EXISTS sessions (
                     id TEXT PRIMARY KEY, revision INTEGER NOT NULL, updated_at TEXT NOT NULL,
                     payload TEXT NOT NULL
@@ -151,13 +154,24 @@ class Store:
         with self.connect() as db:
             return [json.loads(r[0]) for r in db.execute(sql, params)]
 
-    def put_document(self, document, chunks):
+    def document_source(self, doc_id):
+        with self.connect() as db:
+            row=db.execute("SELECT content FROM document_assets WHERE document_id=?",(doc_id,)).fetchone()
+            if not row:
+                raise KeyError(doc_id)
+            return row[0]
+
+    def put_document(self, document, chunks, source_bytes=None):
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             existing = db.execute("SELECT payload FROM documents WHERE fingerprint=?", (document["fingerprint"],)).fetchone()
             if existing:
                 return {**json.loads(existing[0]), "duplicate": True}
             db.execute("INSERT INTO documents(id,fingerprint,payload) VALUES(?,?,?)", (document["id"], document["fingerprint"], json.dumps(document, ensure_ascii=False)))
+            if source_bytes is not None:
+                if len(source_bytes)>10*1024*1024:
+                    raise ValueError("原始 PDF 文件超过 10 MB")
+                db.execute("INSERT INTO document_assets VALUES(?,?)",(document["id"],source_bytes))
             for chunk in chunks:
                 db.execute("INSERT INTO chunks VALUES(?,?,?,?,?)", (chunk["id"], document["id"], document["model"], document["version"], json.dumps(chunk, ensure_ascii=False)))
             from .indexing import index_chunks

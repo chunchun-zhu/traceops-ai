@@ -3,13 +3,12 @@ import json
 import re
 from uuid import uuid4
 
-import pymupdf
-
+from .document_parser import parse_pdf
 from .schemas import DocumentInput
 from .store import Store, now
 
 
-def parse_file(filename: str, content: bytes) -> list[str]:
+def parse_file(filename: str, content: bytes, gateway=None, mode="auto", progress=None) -> list[str]:
     suffix = filename.rsplit(".", 1)[-1].lower()
     if suffix in {"txt", "md"}:
         try:
@@ -20,23 +19,8 @@ def parse_file(filename: str, content: bytes) -> list[str]:
             raise ValueError("文档为空")
         return [text]
     if suffix != "pdf":
-        raise ValueError("支持 .md、.txt 和包含文本层的 .pdf")
-    try:
-        with pymupdf.open(stream=content, filetype="pdf") as pdf:
-            if pdf.needs_pass:
-                raise ValueError("请先解密 PDF")
-            if len(pdf) > 500:
-                raise ValueError("核心版最多解析 500 页 PDF")
-            pages = [page.get_text(sort=True) for page in pdf]
-    except (pymupdf.FileDataError, RuntimeError) as exc:
-        raise ValueError("PDF 损坏或无法解析") from exc
-    # Do not silently discard scanned pages in mixed PDFs.
-    empty = [i + 1 for i, page in enumerate(pages) if not page.strip()]
-    if empty:
-        raise ValueError(f"第 {empty[:20]} 页没有文本层；请先完成 OCR 再导入")
-    if not pages:
-        raise ValueError("PDF 没有页面")
-    return pages
+        raise ValueError("支持 .md、.txt 和 .pdf")
+    return parse_pdf(content,gateway,mode,progress)
 
 
 def split_page(text: str, max_chars: int = 1000):
@@ -59,20 +43,38 @@ def split_page(text: str, max_chars: int = 1000):
         yield {"text": "\n\n".join(current), "start": start, "end": end, "section": heading}
 
 
-def ingest(store: Store, meta: DocumentInput, pages: list[str] | None = None, filename: str | None = None):
+def ingest(store: Store, meta: DocumentInput, pages: list[str] | None = None, filename: str | None = None, source_bytes=None):
     pages = pages or [meta.text]
     if not any(p.strip() for p in pages):
         raise ValueError("文档为空")
     identity = {**meta.model_dump(exclude={"text"}), "pages": pages}
+    parsing=getattr(pages,"metadata",None)
+    if parsing:
+        # Reuse the first immutable parse for the same source and engine version.
+        identity={**meta.model_dump(exclude={"text"}),"parser":{k:parsing[k] for k in ("version","mode","source_sha256")},
+                  "engines":[(p["engine"],p["model_version"]) for p in parsing["pages"]]}
     fingerprint = hashlib.sha256(json.dumps(identity, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
     doc_id = uuid4().hex
     chunks = []
     for page_no, page in enumerate(pages, 1):
-        for part in split_page(page):
+        parts=split_page(page)
+        if parsing:
+            # Keep each table whole; canonical source ranges remain exact.
+            parts=({"text":page[b["start"]:b["end"]],"start":b["start"],"end":b["end"],"section":"表格" if b["kind"]=="table" else "PDF 原文",
+                    "provenance":{"block_id":b["id"],"kind":b["kind"],"bbox":b["bbox"],"coordinates":b["coordinates"],
+                                  "method":parsing["pages"][page_no-1]["method"],"confidence":b.get("confidence")}}
+                   for b in parsing["pages"][page_no-1]["blocks"] if "start" in b)
+        for part in parts:
             chunks.append({**part, "id": f"{doc_id}:{len(chunks) + 1}", "document_id": doc_id,
                            "title": meta.title, "model": meta.model, "version": meta.version,
                            "page": page_no, "kind": meta.kind,
                            "preliminary_cause": meta.preliminary_cause, "confirmed_cause": meta.confirmed_cause})
     document = {**meta.model_dump(exclude={"text"}), "id": doc_id, "fingerprint": fingerprint,
-                "filename": filename, "pages": pages, "chunk_count": len(chunks), "created_at": now()}
-    return store.put_document(document, chunks)
+                "filename": filename, "pages": list(pages), "chunk_count": len(chunks), "created_at": now()}
+    if parsing:
+        document["parsing"]=parsing
+        document["parsing_summary"]={"version":parsing["version"],"mode":parsing["mode"],"ocr_pages":parsing["ocr_pages"],
+                                      "tables":parsing["tables"],"pages":len(pages),
+                                      "requires_visual_review":bool(parsing["ocr_pages"] or parsing["tables"])}
+    document["has_source_pdf"]=source_bytes is not None
+    return store.put_document(document, chunks, source_bytes)

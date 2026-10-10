@@ -37,6 +37,7 @@ class PasswordInput(BaseModel):
 class ReviewInput(BaseModel):
     decision: Literal["approved", "rejected"]
     note: str = Field(min_length=1, max_length=2000)
+    visual_checked: bool = False
 
 
 def password_hash(password, salt=None):

@@ -49,7 +49,7 @@ jobs:
             if curl --fail --silent http://localhost:8080/api/health > /tmp/health.json; then break; fi
             sleep 2
           done
-          python -c "import json; h=json.load(open('/tmp/health.json')); assert h['status']=='ok' and h['task_worker_alive'] and h['version']=='0.4.0'"
+          python -c "import json; h=json.load(open('/tmp/health.json')); assert h['status']=='ok' and h['task_worker_alive'] and h['version']=='0.5.0'"
           curl --fail --silent http://localhost:8080/ > /tmp/index.html
           curl --fail --silent http://localhost:8080/api/devices > /tmp/devices.json
           python -c "import json; assert len(json.load(open('/tmp/devices.json'))) > 0"

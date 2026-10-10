@@ -1,0 +1,7 @@
+# Optional worker only. Install PaddlePaddle CPU/GPU per the official deployment guide.
+# Keep these out of the core application's environment and lock file.
+fastapi>=0.115,<1
+uvicorn>=0.34,<1
+pydantic-settings>=2.7,<3
+httpx>=0.28,<1
+paddleocr[doc-parser]>=3.3,<4

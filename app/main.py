@@ -5,9 +5,11 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from uuid import uuid4
+from typing import Literal
+import pymupdf
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile, Query
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from filelock import FileLock
 from fastapi.staticfiles import StaticFiles
 
@@ -23,6 +25,8 @@ from .workflow import Workflow
 from .operations import Operations
 from .tasks import TaskQueue
 from .security import Security, LoginInput, UserInput, UserUpdate, PasswordInput, ReviewInput
+from .ocr import OCRGateway
+from .document_parser import render_page
 
 SERVICE_LOCKS = {}
 
@@ -39,7 +43,8 @@ def create_app(settings: Settings | None = None):
         retriever = Retriever(store, gateway)
         workflow = Workflow(store, retriever, gateway)
         operations = Operations(store)
-        tasks = TaskQueue(store, retriever.index)
+        ocr_gateway = OCRGateway(settings)
+        tasks = TaskQueue(store, retriever.index, ocr_gateway)
         security = Security(store)
         workflow.operations.require_trusted = settings.auth_mode == "accounts"
 
@@ -60,7 +65,7 @@ def create_app(settings: Settings | None = None):
             finally:
                 service_lock.release()
 
-    app = FastAPI(title="溯障 · 设备诊断与协同排障", version="0.4.0", lifespan=lifespan)
+    app = FastAPI(title="溯障 · 设备诊断与协同排障", version="0.5.0", lifespan=lifespan)
     app.state.store, app.state.workflow = store, workflow
     app.state.tasks, app.state.operations = tasks, operations
     app.state.security = security
@@ -149,9 +154,10 @@ def create_app(settings: Settings | None = None):
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "version": "0.4.0", "llm_configured": bool(settings.llm_base_url),
+        return {"status": "ok", "version": "0.5.0", "llm_configured": bool(settings.llm_base_url),
                 "embedding_configured": bool(settings.embedding_base_url), "rerank_configured": bool(settings.rerank_url),
                 "authentication": settings.auth_mode == "accounts" or bool(settings.api_token), "auth_mode": settings.auth_mode, "demo_data": settings.seed_demo,
+                "ocr_configured":bool(settings.ocr_url),
                 "task_worker_alive": bool(tasks.thread and tasks.thread.is_alive())}
 
     @app.post("/api/auth/login")
@@ -238,11 +244,20 @@ def create_app(settings: Settings | None = None):
 
     @app.get("/api/documents", dependencies=auth)
     def documents():
-        return [{k: v for k, v in d.items() if k != "pages"} for d in store.documents()]
+        return [{k: v for k, v in d.items() if k not in {"pages","parsing"}} for d in store.documents()]
 
     @app.get("/api/documents/{doc_id}", dependencies=auth)
     def document(doc_id: str):
         return store.document(doc_id)
+
+    @app.get("/api/documents/{doc_id}/pages/{page_no}/image", dependencies=auth)
+    def document_image(doc_id: str, page_no: int):
+        raw=store.document_source(doc_id)
+        with pymupdf.open(stream=raw,filetype="pdf") as pdf:
+            if not 1<=page_no<=len(pdf):
+                raise HTTPException(404,"页码不存在")
+            png,_,_=render_page(pdf[page_no-1],settings.ocr_dpi)
+        return Response(png,media_type="image/png")
 
     @app.post("/api/documents/{doc_id}/status", dependencies=auth)
     def document_status(doc_id: str, request: DocumentStatusInput):
@@ -262,13 +277,14 @@ def create_app(settings: Settings | None = None):
         return ingest(store, request)
 
     @app.post("/api/documents/upload", dependencies=auth)
-    def upload(file: UploadFile = File(...), model: str = Form(...), version: str = Form("1.0")):
+    def upload(file: UploadFile = File(...), model: str = Form(...), version: str = Form("1.0"), pdf_mode: Literal["auto","native","ocr"] = Form("auto")):
         content = file.file.read(10 * 1024 * 1024 + 1)
         if len(content) > 10 * 1024 * 1024:
             raise HTTPException(413, "文件上限为 10 MB")
-        pages = parse_file(file.filename or "upload", content)
+        pages = parse_file(file.filename or "upload", content,ocr_gateway,pdf_mode)
         meta = DocumentInput(title=file.filename or "导入资料", model=model, version=version, text="\n".join(pages))
-        return ingest(store, meta, pages=pages, filename=file.filename)
+        result=ingest(store,meta,pages=pages,filename=file.filename,source_bytes=content if (file.filename or "").lower().endswith(".pdf") else None)
+        return {k:v for k,v in result.items() if k not in {"pages","parsing"}}
 
     @app.get("/api/tasks", dependencies=auth)
     def task_list():
@@ -291,13 +307,13 @@ def create_app(settings: Settings | None = None):
         return tasks.enqueue("embedding", {})
 
     @app.post("/api/tasks/documents", status_code=202, dependencies=auth)
-    def task_document(file: UploadFile = File(...), model: str = Form(...), version: str = Form("1.0")):
+    def task_document(file: UploadFile = File(...), model: str = Form(...), version: str = Form("1.0"), pdf_mode: Literal["auto","native","ocr"] = Form("auto")):
         content = file.file.read(10 * 1024 * 1024 + 1)
         if len(content) > 10 * 1024 * 1024:
             raise HTTPException(413, "文件上限为 10 MB")
         filename = file.filename or "upload"
         DocumentInput(title=filename, model=model, version=version, text="待后台解析")
-        return tasks.enqueue("document", {"filename":filename,"model":model,"version":version,"content":base64.b64encode(content).decode()})
+        return tasks.enqueue("document", {"filename":filename,"model":model,"version":version,"pdf_mode":pdf_mode,"content":base64.b64encode(content).decode()})
 
     @app.post("/api/alarms", dependencies=auth)
     def add_alarm(request: AlarmInput):

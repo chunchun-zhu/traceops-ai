@@ -2,6 +2,14 @@
 
 项目一的可运行核心版本：资料导入、设备供气关系、证据检索、多轮检查、人工确认、维修复测及交接。模型部署由你完成，当前版本无需模型也能验证流程。
 
+## 0.5 PDF 表格与 OCR 接入
+
+- 文字层 PDF 直接提取表格，保留行列、空单元格、页面坐标和完整表格切片。
+- 扫描/混合 PDF 接入可选 OCR 服务；支持解析模式、逐页进度、失败重试和取消。
+- 保存原始 PDF，来源窗口展示页图、解析方法、引擎版本及置信度；账号模式下 OCR/表格标准审批须确认原图核验。
+
+无需模型即可体验文字层表格。识别服务封装已提供，模型由你最后部署；步骤、契约和边界见 [OCR 接入指南](docs/ocr-integration.md)。
+
 ## 0.4 运行保障与人员审核
 
 - Windows/Linux CI：自动测试、依赖及语法检查；独立 Docker 构建和启动冒烟，不部署服务。
@@ -59,7 +67,7 @@ python -m venv .venv
 
 | 能力 | 核心版本实现 |
 |---|---|
-| 文档解析 | PyMuPDF 文本层 PDF、UTF-8 TXT/MD；页码、章节、字符范围；重复内容与元数据幂等入库 |
+| 文档解析 | PyMuPDF 文字层 PDF/表格、可选扫描页 OCR、UTF-8 TXT/MD；页码、字符范围、解析来源、原图核对及幂等入库 |
 | 工单标准化 | `kind=work_order`，分别保存初步判断与最终确认字段；JSON API 可导入 |
 | 检索 | 持久化词法索引、增量入库 BM25、故障码分流、型号/版本过滤、原文引用 |
 | 混合检索 | 显式批量增量构建、SQLite 向量缓存与模型隔离；查询仅编码问题，余弦 + RRF + 可选重排 |
@@ -74,7 +82,7 @@ python -m venv .venv
 | 观测 | 请求 id、耗时响应头和服务访问日志、会话节点轨迹 |
 | 测试 | API、状态恢复、资料过滤/引用、模型 HTTP 契约及 MCP 协议集成测试 |
 
-本版本没有部署模型，也未搭建 Elasticsearch、Neo4j、PostgreSQL、TimescaleDB、Redis、Celery、MinIO、OCR 或 OpenTelemetry 后端。Docker 文件已提供，当前环境未运行容器验收。没有真实工业评测，不能沿用简历历史指标。
+本版本没有部署模型，包括 OCR 模型；未搭建 Elasticsearch、Neo4j、PostgreSQL、TimescaleDB、Redis、Celery、MinIO 或 OpenTelemetry 后端。Docker 构建启动已在 GitHub Actions 验证，本机未运行容器。没有真实工业评测，不能沿用简历历史指标。
 
 当前使用 LangGraph 原生节点 checkpoint，等待人工输入时 interrupt，接口通过 Command(resume=...) 继续。节点结果保存后，业务投影写入失败可在下一次读取修复。正在执行而尚未保存 checkpoint 的节点可能重跑；不保证外部模型调用恰好一次。模型接入后只解释证据，不改变规则分支；引用校验只验证 id 存在，不自动证明引用内容支持结论。
 
@@ -85,7 +93,10 @@ app/
   main.py          API 与静态页面
   schemas.py       请求与模型输出约束
   store.py         SQLite 事务、快照、事件
-  ingest.py        PDF/文本解析与分块
+  ingest.py        文档入库与来源分块
+  document_parser.py PDF 文字层、表格与扫描页解析
+  ocr.py           OCR HTTP 契约与受限表格转换
+  ocr_service.py   可选独立 PP-StructureV3 服务
   tasks.py         持久化后台任务、取消、重试与恢复
   operations.py    告警事件、结构化复测标准
   indexing.py      持久化词法统计与增量向量缓存
@@ -106,7 +117,7 @@ docs/              需求、设计、模型接入与验证记录
 
 “供气关系与测点”页可导入 `examples/topology.json` 格式，支持节点新增/更新及关系追加。该接口不会删除已有关系；关系纠正与删除需后续增加审核操作。
 
-“设备知识库”页导入手册时填写适用型号，必须与设备台账的 `model` 相同。公共供气资料使用 `AIR-SYSTEM`。PDF 最多 500 页、文件最多 10 MB，任一页没有文本层则提示先 OCR，不会静默跳过扫描页。原文位置对应解析后的页文本，不是 PDF 图像坐标。
+“设备知识库”页导入手册时填写适用型号，必须与设备台账的 `model` 相同。公共供气资料使用 `AIR-SYSTEM`。PDF 最多 500 页、文件最多 10 MB、解析后最多 500000 字符。扫描页未配置 OCR 时拒绝整份导入；配置后可重试，不静默跳过失败页。字符位置对应规范化页文本，块坐标另存为 PDF 点或渲染像素。表格空位置不自动继承数值；标准须人工核对型号、单位和范围。
 
 工单用 `POST /api/documents`，格式见 `examples/work-order.json`。压力快照用 `POST /api/measurements`，固定 MPa、带时区 ISO 时间及来源。已开始会话保留旧证据与测点快照，新会话使用最新数据。
 
@@ -171,10 +182,10 @@ SUZHANG_RERANK_URL=http://127.0.0.1:8002/rerank
 docker compose up --build
 ```
 
-默认仅绑定本机 8080，命名卷保存 SQLite。Compose 没有加载宿主机模型配置；需要模型时在 Compose 添加同名环境变量。容器里的 `127.0.0.1` 是容器自身，宿主机服务在 Docker Desktop 可用 `host.docker.internal`。实际容器启动未在本次环境验证。
+默认仅绑定本机 8080，命名卷保存 SQLite。Compose 没有加载宿主机模型配置；需要模型时在 Compose 添加同名环境变量。容器里的 `127.0.0.1` 是容器自身，宿主机服务在 Docker Desktop 可用 `host.docker.internal`。GitHub Actions 验证了镜像构建、健康状态、静态页面与模拟设备读取，未包含 GPU/OCR 模型运行。
 
-本地演示默认无鉴权。共享部署前配置 `SUZHANG_API_TOKEN`，页面“设置访问令牌”填写同一个值。该令牌是项目级访问控制，未实现用户、班组、租户、资料权限与确认人身份认证；操作人字段仅为人工记录。日志不记录令牌或模型响应正文。
+本地演示默认 legacy、无鉴权；可配置项目级 `SUZHANG_API_TOKEN`。需要登录人员身份与独立审核时启用 accounts，按 [运维指南](docs/operations-guide.md) 创建管理员并配置来源及 Cookie。账号模式提供角色和人员事件快照；未实现租户、班组或文档级权限。日志不记录令牌或模型响应正文。
 
 ## 实现参考
 
-本次核对了 [LangGraph Graph API](https://docs.langchain.com/oss/python/langgraph/graph-api)、[官方 MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) 与 [FastAPI 文件上传](https://fastapi.tiangolo.com/tutorial/request-files/)。依赖实际安装版本见锁文件。
+本次核对了 [LangGraph Graph API](https://docs.langchain.com/oss/python/langgraph/graph-api)、[官方 MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)、[FastAPI 文件上传](https://fastapi.tiangolo.com/tutorial/request-files/)、[PyMuPDF Page API](https://pymupdf.readthedocs.io/en/latest/page.html) 与 [PP-StructureV3](https://github.com/PaddlePaddle/PaddleOCR/blob/main/docs/version3.x/pipeline_usage/PP-StructureV3.en.md)。核心依赖实际安装版本见锁文件。

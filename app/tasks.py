@@ -10,6 +10,7 @@ from filelock import FileLock, Timeout
 from .ingest import ingest, parse_file
 from .schemas import DocumentInput
 from .store import ConflictError, now
+from .ocr import OCRGateway
 
 
 class TaskCancelled(Exception):
@@ -17,8 +18,9 @@ class TaskCancelled(Exception):
 
 
 class TaskQueue:
-    def __init__(self, store, index):
+    def __init__(self, store, index, ocr_gateway=None):
         self.store, self.index = store, index
+        self.ocr_gateway = ocr_gateway or OCRGateway(index.gateway.settings)
         self.stop_event = threading.Event()
         self.thread = None
         self.worker_lock = FileLock(str(store.path)+".tasks.lock",timeout=0)
@@ -134,11 +136,13 @@ class TaskQueue:
             if job["kind"]=="document":
                 self.checkpoint(job_id,stage="parsing")
                 raw=base64.b64decode(payload["content"])
-                pages=parse_file(payload["filename"],raw)
+                pages=parse_file(payload["filename"],raw,self.ocr_gateway,payload.get("pdf_mode","auto"),
+                                 lambda done,total,stage:self.checkpoint(job_id,done,total,stage))
                 meta=DocumentInput(title=payload["filename"],model=payload["model"],version=payload["version"],text="\n".join(pages))
                 self.commit_phase(job_id)
-                result=ingest(self.store,meta,pages=pages,filename=payload["filename"])
-                result={k:v for k,v in result.items() if k!="pages"}
+                result=ingest(self.store,meta,pages=pages,filename=payload["filename"],
+                              source_bytes=raw if payload["filename"].lower().endswith(".pdf") else None)
+                result={k:v for k,v in result.items() if k not in {"pages","parsing"}}
             else:
                 if payload["model_key"]!=self.index.model_key:
                     raise ValueError("模型配置已变化，请创建新构建任务")

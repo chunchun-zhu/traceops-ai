@@ -69,6 +69,13 @@ class Operations:
         item = {**request.model_dump(),"id":uuid4().hex,"unit":"MPa","source_start":start,
                 "source_end":start+len(request.quote),"document_title":doc["title"],"document_version":doc["version"],
                 "approved_at":now(),"is_demo":is_demo}
+        page_meta=(doc.get("parsing") or {}).get("pages",[])
+        if page_meta:
+            origin=page_meta[request.page-1]
+            matched=[b for b in origin["blocks"] if b.get("start",0)<start+len(request.quote) and b.get("end",0)>start]
+            item["source_origin"]={"method":origin["method"],"engine":origin["engine"],"model_version":origin["model_version"],
+                                   "requires_visual_review":origin["method"]=="ocr" or any(b["kind"]=="table" for b in matched),
+                                   "blocks":[b["id"] for b in matched],"confidence_min":origin["confidence_min"]}
         if submitted_by:
             item.update(review_status="pending", submitted_by=submitted_by,
                         approved_by="", approved_at=None)
@@ -103,9 +110,12 @@ class Operations:
         # Recheck source activation and exact quote at approval time.
         if request.decision == "approved":
             self.check_source(StandardInput(**{**item,"approved_by":reviewer["username"]}))
+            if item.get("source_origin",{}).get("requires_visual_review"):
+                if not request.visual_checked or not self.store.document(item["reference_document_id"]).get("has_source_pdf"):
+                    raise ValueError("OCR 或表格标准须打开原始 PDF 页面图像核对，并确认 visual_checked")
         item.pop("active", None)
         item.update(review_status=request.decision, review_note=request.note, reviewed_by=reviewer,
-                    approved_by=f'{reviewer["display_name"]} ({reviewer["username"]})', approved_at=now())
+                    approved_by=f'{reviewer["display_name"]} ({reviewer["username"]})', approved_at=now(), visual_checked=request.visual_checked)
         with self.store.connect() as db:
             db.execute("UPDATE standards SET active=?,payload=? WHERE id=?", (int(request.decision=="approved"),json.dumps(item,ensure_ascii=False),standard_id))
             if audit:
